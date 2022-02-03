@@ -70,7 +70,7 @@ namespace FaceMask
             dlg.FileName = Path.GetFileNameWithoutExtension(srcPath) + "_output";
             //dlg.DefaultExt = ext;
             //dlg.Filter = "MP4 비디오|*.mp4|AVI 비디오|*.avi";
-            dlg.Filter = "H264 비디오|*.h264|MP4 비디오|*.mp4|AVI 비디오|*.avi";
+            dlg.Filter = "H264 비디오|*.h264";//|MP4 비디오|*.mp4|AVI 비디오|*.avi";
             if (dlg.ShowDialog() == DialogResult.OK)
             {
                 string dstPath = dlg.FileName;

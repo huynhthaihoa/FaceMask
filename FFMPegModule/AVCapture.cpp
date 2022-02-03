@@ -316,7 +316,7 @@ void CAVCapture::closeWriting()
 
         flushPackets();
 
-        av_write_trailer(pWFormatCtx);
+        //av_write_trailer(pWFormatCtx);
 
         avio_close(pWFormatCtx->pb);
         avformat_free_context(pWFormatCtx);
