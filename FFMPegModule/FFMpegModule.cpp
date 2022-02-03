@@ -63,10 +63,10 @@ DLLEXPORT int WriteVideo(const char* strOutputFile)
 	return ret;
 }
 
-DLLEXPORT int Test()
-{
-	return 1;
-}
+//DLLEXPORT int Test()
+//{
+//	return 1;
+//}
 
 DLLEXPORT int Process(const char* strInputFile, const char* strOutputFile)
 {
@@ -84,4 +84,13 @@ DLLEXPORT int Process(const char* strInputFile, const char* strOutputFile)
 		ret = _avCapture->writeVideo(strOutputFile);
 #endif
 	return ret;
+}
+
+DLLEXPORT void Release()
+{
+	if (_avCapture)
+	{
+		delete _avCapture;
+		_avCapture = nullptr;
+	}
 }

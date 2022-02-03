@@ -304,8 +304,13 @@ CAVCapture::CAVCapture()
 
     pRFormatCtx = nullptr;
 
+    _pWriter = new VideoWriter();
     //_volSize = 0;
     //_pVolData = nullptr;
+
+    av_register_all();
+    avdevice_register_all();
+    avcodec_register_all();
 }
 
 CAVCapture::~CAVCapture()
@@ -314,6 +319,8 @@ CAVCapture::~CAVCapture()
         delete _pDnn;
         _pDnn = nullptr;
     }
+
+    closeReading();
 
     if (_pWriter)
     {
@@ -411,76 +418,14 @@ void CAVCapture::waitForFinish()
 
 int CAVCapture::doReadWrite(const char* strInputFile, const char* strOutputFile)
 {
-    av_register_all();
-    avdevice_register_all();
-    avcodec_register_all();
-    //pRFormatCtx = NULL;
-    pRFormatCtx = avformat_alloc_context();
-
-    if (avformat_open_input(&pRFormatCtx, strInputFile, NULL, NULL) != 0)
-        return -12;
-
-    // Get video file information
-    if (avformat_find_stream_info(pRFormatCtx, NULL) < 0)
-    {
-        avformat_close_input(&pRFormatCtx);
-        pRFormatCtx = nullptr;
-        return -13;
-
-    }
-
     int videoindex = -1;
-    for (int i = 0; i < pRFormatCtx->nb_streams; i++) {
-        if (pRFormatCtx->streams[i]->codec->codec_type == AVMediaType::AVMEDIA_TYPE_VIDEO) {
-            videoindex = i;
-            break;
-        }
-    }
-    if (videoindex < 0)
-    {
-        avformat_close_input(&pRFormatCtx);
-        pRFormatCtx = nullptr;
-        return -1;
-    }
+    int ret = openReading(strInputFile, videoindex);
+    if (ret != 0)
+        return ret;
 
-    pRCodecCtx = pRFormatCtx->streams[videoindex]->codec;
-    pRCodec = avcodec_find_decoder(pRCodecCtx->codec_id);
-    if (pRCodec == nullptr)
-        return -15;
-    if (avcodec_open2(pRCodecCtx, pRCodec, nullptr) < 0)
-        return -16;
-
-
-    if (!_pDnn)
-    {
-        avcodec_close(pRCodecCtx);
-        avformat_close_input(&pRFormatCtx);
-        return -1;
-    }
-
-    pRFrame = av_frame_alloc();
-
-    _format = AVPixelFormat::AV_PIX_FMT_RGB24;
-    _nBytes = avpicture_get_size(_format, pRCodecCtx->width, pRCodecCtx->height);
-    pRBuffer = static_cast<uint8_t*>(av_malloc(_nBytes * sizeof(uint8_t)));
-    avpicture_fill(reinterpret_cast<AVPicture*>(pRFrame), pRBuffer, AVPixelFormat::AV_PIX_FMT_BGR24, pRCodecCtx->width, pRCodecCtx->height);
-
-    pRDst = av_frame_alloc();
-    avpicture_fill(reinterpret_cast<AVPicture*>(pRDst), pRBuffer, _format, pRCodecCtx->width, pRCodecCtx->height);
-
-    _ySize = pRCodecCtx->width * pRCodecCtx->height;
-    pRPacket = (AVPacket*)av_malloc(sizeof(AVPacket));
-    av_new_packet(pRPacket, _ySize);
-
-    _frameWidth = pRCodecCtx->width;
-    _frameHeight = pRCodecCtx->height;
-    Size frameSize(_frameWidth, _frameHeight);
-    _fps = pRCodecCtx->framerate;  //pFormatCtx->streams[videoindex]->r_frame_rate;
-    _nFrames = 0;
-    double videoFPS = av_q2d(_fps);
-    _pWriter = new VideoWriter(string(strOutputFile), VideoWriter::fourcc('M', 'J', 'P', 'G'), av_q2d(_fps), frameSize);
-
-    av_dump_format(pRFormatCtx, 0, strInputFile, 0);
+    ret = openWriting(strOutputFile);
+    if (ret != 0)
+        return ret;
 
     concurrency::task<void> t = concurrency::create_task([videoindex, this]()//, &frame
         {
@@ -529,18 +474,19 @@ int CAVCapture::doReadWrite(const char* strInputFile, const char* strOutputFile)
             //    _pDnn = nullptr;
             //}
 
-
+            closeReading();
+            closeWriting();
             // close the file and release memory
-            if (pRFormatCtx != nullptr)
-            {
-                //sws_freeContext(pSwsCtx);
-                av_frame_free(&pRFrame);
-                av_frame_free(&pRDst);
-                av_free(pRBuffer);
-                avcodec_close(pRCodecCtx);
-                avformat_close_input(&pRFormatCtx);
-                _pWriter->release();
-            }
+            //if (pRFormatCtx != nullptr)
+            //{
+            //    //sws_freeContext(pSwsCtx);
+            //    av_frame_free(&pRFrame);
+            //    av_frame_free(&pRDst);
+            //    av_free(pRBuffer);
+            //    avcodec_close(pRCodecCtx);
+            //    avformat_close_input(&pRFormatCtx);
+            //    _pWriter->release();
+            //}
 
             _isRun = false;
             //dataReady = 1;
@@ -551,4 +497,106 @@ int CAVCapture::doReadWrite(const char* strInputFile, const char* strOutputFile)
         });
 
     return 0;
+}
+
+int CAVCapture::openReading(const char* strInputFile, int& videoindex)
+{
+    //pRFormatCtx = NULL;
+    pRFormatCtx = avformat_alloc_context();
+
+    if (avformat_open_input(&pRFormatCtx, strInputFile, NULL, NULL) != 0)
+        return -12;
+
+    // Get video file information
+    if (avformat_find_stream_info(pRFormatCtx, NULL) < 0)
+    {
+        avformat_close_input(&pRFormatCtx);
+        pRFormatCtx = nullptr;
+        return -13;
+
+    }
+
+    
+    for (int i = 0; i < pRFormatCtx->nb_streams; i++) {
+        if (pRFormatCtx->streams[i]->codec->codec_type == AVMediaType::AVMEDIA_TYPE_VIDEO) {
+            videoindex = i;
+            break;
+        }
+    }
+    if (videoindex < 0)
+    {
+        avformat_close_input(&pRFormatCtx);
+        pRFormatCtx = nullptr;
+        return -1;
+    }
+
+    pRCodecCtx = pRFormatCtx->streams[videoindex]->codec;
+    pRCodec = avcodec_find_decoder(pRCodecCtx->codec_id);
+    if (pRCodec == nullptr)
+        return -15;
+    if (avcodec_open2(pRCodecCtx, pRCodec, nullptr) < 0)
+        return -16;
+
+
+    if (!_pDnn)
+    {
+        avcodec_close(pRCodecCtx);
+        avformat_close_input(&pRFormatCtx);
+        return -1;
+    }
+
+    pRFrame = av_frame_alloc();
+
+    _format = AVPixelFormat::AV_PIX_FMT_RGB24;
+    _nBytes = avpicture_get_size(_format, pRCodecCtx->width, pRCodecCtx->height);
+    pRBuffer = static_cast<uint8_t*>(av_malloc(_nBytes * sizeof(uint8_t)));
+    avpicture_fill(reinterpret_cast<AVPicture*>(pRFrame), pRBuffer, AVPixelFormat::AV_PIX_FMT_BGR24, pRCodecCtx->width, pRCodecCtx->height);
+
+    pRDst = av_frame_alloc();
+    avpicture_fill(reinterpret_cast<AVPicture*>(pRDst), pRBuffer, _format, pRCodecCtx->width, pRCodecCtx->height);
+
+    _ySize = pRCodecCtx->width * pRCodecCtx->height;
+    pRPacket = (AVPacket*)av_malloc(sizeof(AVPacket));
+    av_new_packet(pRPacket, _ySize);
+
+    _frameWidth = pRCodecCtx->width;
+    _frameHeight = pRCodecCtx->height;
+
+    av_dump_format(pRFormatCtx, 0, strInputFile, 0);
+
+    return 0;
+}
+
+int CAVCapture::openWriting(const char* strOutputFile)
+{
+    Size frameSize(_frameWidth, _frameHeight);
+    _fps = pRCodecCtx->framerate;  //pFormatCtx->streams[videoindex]->r_frame_rate;
+    _nFrames = 0;
+    double videoFPS = av_q2d(_fps);
+    //_pWriter = new VideoWriter(string(strOutputFile), VideoWriter::fourcc('M', 'J', 'P', 'G'), av_q2d(_fps), frameSize);
+
+    bool ret = _pWriter->open(string(strOutputFile), -1, av_q2d(_fps), frameSize);
+
+    if (ret == false)
+        return 1;
+
+    return 0;
+}
+
+void CAVCapture::closeReading()
+{
+    if (pRFormatCtx != nullptr)
+    {
+        //sws_freeContext(pSwsCtx);
+        av_frame_free(&pRFrame);
+        av_frame_free(&pRDst);
+        av_free(pRBuffer);
+        avcodec_close(pRCodecCtx);
+        avformat_close_input(&pRFormatCtx);
+    }
+}
+
+void CAVCapture::closeWriting()
+{
+    _pWriter->release();
 }

@@ -7,5 +7,6 @@
 DLLEXPORT bool IsRun();
 DLLEXPORT int ReadVideo(const char* strInputFile);
 DLLEXPORT int WriteVideo(const char* strOutputFile);
-DLLEXPORT int Test();
+//DLLEXPORT int Test();
 DLLEXPORT int Process(const char* strInputFile, const char* strOutputFile);
+DLLEXPORT void Release();

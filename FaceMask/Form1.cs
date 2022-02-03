@@ -23,8 +23,8 @@ namespace FaceMask
         private static extern int Process(string strInputFile, string strOutputFile);
 
         //private int status;
-        //[DllImport("FFMPegModule.dll", EntryPoint = "Test", CallingConvention = CallingConvention.Cdecl)]
-        //private static extern int Test();
+        [DllImport("FFMPegModule.dll", EntryPoint = "Release", CallingConvention = CallingConvention.Cdecl)]
+        private static extern void Release();
 
         //private string _inputFileName;
 
@@ -66,7 +66,7 @@ namespace FaceMask
             string ext = Path.GetExtension(srcPath);
             dlg.FileName = Path.GetFileNameWithoutExtension(srcPath) + "_output";
             dlg.DefaultExt = ext;
-            dlg.Filter = "AVI 비디오|*.avi";
+            dlg.Filter = "MP4 비디오|*.mp4";
             if (dlg.ShowDialog() == DialogResult.OK)
             {
                 string dstPath = dlg.FileName;
@@ -121,6 +121,7 @@ namespace FaceMask
 
         private void Form1_FormClosed(object sender, FormClosedEventArgs e)
         {
+            Release();
             //Close();
             System.Diagnostics.Process.GetCurrentProcess().Kill();
         }

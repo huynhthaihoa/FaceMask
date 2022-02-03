@@ -35,16 +35,16 @@ extern "C" {
 //	sData(void* p, int s, int t, std::chrono::time_point<std::chrono::steady_clock> tp) : data(p), size(s) {}
 //};
 
-class AutoCS
-{
-public:
-	AutoCS(CRITICAL_SECTION* p) :m_p(p)
-	{
-		EnterCriticalSection(p);
-	}
-	~AutoCS() { LeaveCriticalSection(m_p); }
-	CRITICAL_SECTION* m_p;
-};
+//class AutoCS
+//{
+//public:
+//	AutoCS(CRITICAL_SECTION* p) :m_p(p)
+//	{
+//		EnterCriticalSection(p);
+//	}
+//	~AutoCS() { LeaveCriticalSection(m_p); }
+//	CRITICAL_SECTION* m_p;
+//};
 
 class CAVCapture
 {
@@ -57,6 +57,10 @@ public:
 	void pushFrame(int rows, int cols, uint8_t* buffer);
 	void waitForFinish();
 	int doReadWrite(const char* strInputFile, const char* strOutputFile);
+	int openReading(const char* strInputFile, int& videoindex);
+	int openWriting(const char* strOutputFile);
+	void closeReading();
+	void closeWriting();
 private:
 	bool _bLoop;
 	std::thread _thr_ai;
