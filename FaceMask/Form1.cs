@@ -22,6 +22,9 @@ namespace FaceMask
         [DllImport("FFMPegModule.dll", EntryPoint = "Process", CallingConvention = CallingConvention.Cdecl)]
         private static extern int Process(string strInputFile, string strOutputFile);
 
+        [DllImport("FFMPegModule.dll", EntryPoint = "Release", CallingConvention = CallingConvention.Cdecl)]
+        private static extern void Release();
+
         //private int status;
         //[DllImport("FFMPegModule.dll", EntryPoint = "Test", CallingConvention = CallingConvention.Cdecl)]
         //private static extern int Test();
@@ -65,16 +68,17 @@ namespace FaceMask
             SaveFileDialog dlg = new SaveFileDialog();
             string ext = Path.GetExtension(srcPath);
             dlg.FileName = Path.GetFileNameWithoutExtension(srcPath) + "_output";
-            dlg.DefaultExt = ext;
-            dlg.Filter = "AVI 비디오|*.avi";
+            //dlg.DefaultExt = ext;
+            //dlg.Filter = "MP4 비디오|*.mp4|AVI 비디오|*.avi";
+            dlg.Filter = "H264 비디오|*.h264|MP4 비디오|*.mp4|AVI 비디오|*.avi";
             if (dlg.ShowDialog() == DialogResult.OK)
             {
                 string dstPath = dlg.FileName;
                 int ret = Process(srcPath, dstPath);
-                if (ret != 0)
+                if (ret < 0)
                     MessageBox.Show("Error on reading input video!");
-                //else if(ret > 0)
-                //    MessageBox.Show("Error on reading output video!");
+                else if (ret > 0)
+                    MessageBox.Show("Error on writing output video!");
                 else
                 {
                     btnSelect.Text = "처리하는 중...";
@@ -121,7 +125,7 @@ namespace FaceMask
 
         private void Form1_FormClosed(object sender, FormClosedEventArgs e)
         {
-            //Close();
+            Release();
             System.Diagnostics.Process.GetCurrentProcess().Kill();
         }
     }

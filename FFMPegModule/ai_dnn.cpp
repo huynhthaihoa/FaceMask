@@ -1,17 +1,26 @@
 #include "stdafx.h"
 #include "ai_dnn.h"
 
-CAIDnn::CAIDnn(std::string strClassFile, string strCfgFile, std::string strWeightsFile, float threshold)
+CAIDnn::CAIDnn(std::string strClassFile, string strCfgFile, std::string strWeightsFile, float confThres, float nmsThres)
 {
-    if (threshold >= 0.0f && threshold <= 1.0f)
-        _threshold = threshold;
+    if (confThres >= 0.0f && confThres <= 1.0f)
+        _confThres = confThres;
+    else if (confThres < 0.0f)
+        _confThres = 0.0f;
+    else
+        _confThres = 1.0f;
+
+    if (nmsThres >= 0.0f && nmsThres <= 1.0f)
+        _nmsThres = nmsThres;
+    else if (nmsThres < 0.0f)
+        _nmsThres = 0.0f;
+    else
+        _nmsThres = 1.0f;
 
     HMODULE hModule;
     hModule = ::GetModuleHandle(nullptr); // handle of current module
-    //ASSERT(hModule != 0);
 
     CString strExeFileName;
-    //VERIFY(::GetModuleFileName(hModule, strExeFileName.GetBuffer(_MAX_PATH), _MAX_PATH));
     ::GetModuleFileName(hModule, strExeFileName.GetBuffer(_MAX_PATH), _MAX_PATH);
     strExeFileName.ReleaseBuffer();
 
@@ -22,32 +31,17 @@ CAIDnn::CAIDnn(std::string strClassFile, string strCfgFile, std::string strWeigh
     CT2A ascii(strExeFileName, CP_UTF8);
     _splitpath_s(ascii.m_psz, Drive, Path, Filename, Ext);
 
-    appPath = string(Drive) + string(Path);
-    //appPath.Format(_T("%s%s"), Drive, Path);
-    //strcat(Drive, Path);
-
-    //std::string classFile = std::format("{}{}{}", Drive, Path, strClassFile.c_str());
-    //std::string classFile = Drive + Path;
-    //appPath.Format(_T("%s%s"), Drive, Path);
-
-    //std::string classFile = string(Drive) + string(Path) + strClassFile;
+    _appPath = string(Drive) + string(Path);
     
-    ifstream ifs(appPath + strClassFile);
+    ifstream ifs(_appPath + strClassFile);
     string line;
     while (getline(ifs, line))
         _classes.push_back(line);
 
-    _net = readNet(appPath + strWeightsFile, appPath + strCfgFile);
+    _net = readNet(_appPath + strWeightsFile, _appPath + strCfgFile);
 
     _net.setPreferableBackend(DNN_BACKEND_CUDA);
     _net.setPreferableTarget(DNN_TARGET_CUDA_FP16);
-//#ifdef _GPU
-//    net.setPreferableBackend(DNN_BACKEND_CUDA);
-//    net.setPreferableTarget(DNN_TARGET_CUDA_FP16);
-//#else
-//    net.setPreferableBackend(DNN_BACKEND_OPENCV);
-//    net.setPreferableTarget(DNN_TARGET_CPU);
-//#endif
 
     vector<int> _outLayers = _net.getUnconnectedOutLayers();
     vector<string> _layersNames = _net.getLayerNames();
@@ -56,42 +50,37 @@ CAIDnn::CAIDnn(std::string strClassFile, string strCfgFile, std::string strWeigh
     for (int i = 0; i < _outLayers.size(); i++)
         _names[i] = _layersNames[_outLayers[i] - 1];
 
-    //_bLoop = true;
-    //_thr_ai = thread{ &CAIDnn::AIThread, this, net };
-
 }
 
 CAIDnn::~CAIDnn()
 {
-    //if (_bLoop) {
-    //	_bLoop = false;
-    //	_thr_ai.join();
-    //}
 }
 
-Mat CAIDnn::analysis(Mat& frame)
+pair<Mat, int64_t> CAIDnn::analysis(Mat& frame, int64_t pts)
 {
+    pair<Mat, int64_t> p;
     Mat blob;
     vector<Mat> outs;
 
     if (!_net.empty()) {
         blobFromImage(frame, blob, 1 / 255.0, cv::Size(608, 608), Scalar(0, 0, 0), true, false);
-        
+
         _net.setInput(blob);
         _net.forward(outs, _names);
     }
 
-
-
     Mat frame2 = frame.clone();
     postprocess(frame2, outs);
-    return frame2;// .clone();
-}
 
+    p.first = frame2;
+    p.second = pts;
+
+    return p;
+}
 
 void CAIDnn::postprocess(Mat& frame, const std::vector<Mat>& outs)
 {
-    float confThreshold = _threshold, nmsThreshold = 0.4f;
+    float confThreshold = _confThres, nmsThreshold = _nmsThres;
 
     float prob = 0.0;
     int cx = 0;

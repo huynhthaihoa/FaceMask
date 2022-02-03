@@ -18,34 +18,20 @@ using namespace dnn;
 class CAIDnn
 {
 public:
-	CAIDnn(std::string strClassFile, string strCfgFile, std::string strWeightsFile, float threshold);
+	CAIDnn(std::string strClassFile, string strCfgFile, std::string strWeightsFile, float confThres = 0.5f, float nmsThres = 0.4f);
 	~CAIDnn();
-	Mat analysis(Mat& frame);
-	//void pushFrame(Mat& frame);
-	//void drawPred(int classId, float conf, int left, int top, int right, int bottom, Mat& frame);
+	pair<Mat, int64_t> analysis(Mat& frame, int64_t pts);
 private:
 	void postprocess(Mat& frame, const std::vector<Mat>& outs);
-	//bool _bLoop = false;
-	//queue<Mat> _Frames;
 	vector<string> _classes;
-	//	int _objCX;
-	//	int _objCY;
-	//	float _evtProb;
-	//	mutex _mtxProb;
 	mutex _mtx;
 	condition_variable _cond;
-	string appPath;
-	//thread _thr_ai;
+	string _appPath;
 
-	//	int _img_w;
-	//	int _img_h;
-
-	float _threshold = 0.5f;
+	float _confThres;// = 0.5f;
+	float _nmsThres;
 
 	dnn::Net _net;
 	vector<string> _names;
-	//vector<int> _outLayers;
-	//vector<string> _layersNames;
-	//vector<string> _classes;
 };
 
