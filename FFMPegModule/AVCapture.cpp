@@ -24,9 +24,10 @@ CAVCapture::~CAVCapture()
 
     if (_isRun == true)
     {
-        closeReading();
-        closeWriting();
+        //closeReading();
+        //closeWriting();
         _isRun = false;
+        _bLoop = false;
     }
 }
 
@@ -48,7 +49,7 @@ void CAVCapture::AIThread()
 
         //lock.unlock();
 
-        if (_pDnn)
+        if (_isRun && _pDnn)
         {
             pair<Mat, int64_t> r = _pDnn->analysis(frame, pts);
             writeFrame(r.first, r.second);
@@ -80,7 +81,7 @@ void CAVCapture::waitForFinish()
 {
     while (1) {
         unique_lock<mutex> lock(_mtx);
-        if (_frames.size() <= 0) {
+        if (!_isRun || _frames.size() <= 0) {
             break;
         }
         lock.unlock();
@@ -93,20 +94,20 @@ void CAVCapture::waitForFinish()
 void CAVCapture::writeFrame(Mat frame, int64_t pts)
 {
     //1st step - convert Mat into AvFrame
-    struct SwsContext* sws_ctx_bgr_yuv = NULL;
-    sws_ctx_bgr_yuv = sws_getContext(pWCodecCtx->width,
-        pWCodecCtx->height,
-        AVPixelFormat::AV_PIX_FMT_BGR24,
-        pWCodecCtx->width,
-        pWCodecCtx->height,
-        pWCodecCtx->pix_fmt //AV_PIX_FMT_YUV420p
-        , SWS_FAST_BILINEAR, nullptr, nullptr, nullptr);
+    //struct SwsContext* sws_ctx_bgr_yuv = NULL;
+    //sws_ctx_bgr_yuv = sws_getContext(pWCodecCtx->width,
+    //    pWCodecCtx->height,
+    //    AVPixelFormat::AV_PIX_FMT_BGR24,
+    //    pWCodecCtx->width,
+    //    pWCodecCtx->height,
+    //    pWCodecCtx->pix_fmt //AV_PIX_FMT_YUV420p
+    //    , SWS_FAST_BILINEAR, nullptr, nullptr, nullptr);
 
     const int kStide[] = { (int)frame.step[0] };
-    sws_scale(sws_ctx_bgr_yuv, &frame.data, kStide, 0, frame.rows, pWFrame->data, pWFrame->linesize);
+    sws_scale(pWSwsContext, &frame.data, kStide, 0, frame.rows, pWFrame->data, pWFrame->linesize);
     pWFrame->pts = pts;
 
-    sws_freeContext(sws_ctx_bgr_yuv);
+    //sws_freeContext(sws_ctx_bgr_yuv);
 
     //2nd step - encode frame and send to video
     if (avcodec_send_frame(pWCodecCtx, pWFrame) < 0)
@@ -179,25 +180,32 @@ int CAVCapture::openReading(const char* strInputFile, int &videoindex)
 
 int CAVCapture::openWriting(const char* strOutputFile)
 {
-    avformat_alloc_output_context2(&pWFormatCtx, nullptr, nullptr, strOutputFile);
-    if (!pWFormatCtx)
+    //guess the output format from the output file name
+    pWOutputFmt = av_guess_format(nullptr, strOutputFile, nullptr);
+    if (!pWOutputFmt)
         return 1;
 
-    //create codec
-    pCodec = avcodec_find_encoder(AV_CODEC_ID_H264);
-    if (!pCodec)
+    //allocate AVFormatContext
+    avformat_alloc_output_context2(&pWFormatCtx, nullptr, nullptr, strOutputFile);
+    if (!pWFormatCtx)
         return 2;
 
+    //find a registered encoder
+    pCodec = avcodec_find_encoder(pWOutputFmt->video_codec);
+    if (!pCodec)
+        return 3;
+
+    //add a new stream to media file
     pStream = avformat_new_stream(pWFormatCtx, nullptr);
     if (!pStream)
-        return 3;
+        return 4;
 
     pStream->id = (int)(pWFormatCtx->nb_streams - 1);
 
     //create codec context
     pWCodecCtx = avcodec_alloc_context3(pCodec);
     if (!pWCodecCtx)
-        return 4;
+        return 5;
 
     //pWPacket = av_packet_alloc();
     //if (!pWPacket)
@@ -208,13 +216,15 @@ int CAVCapture::openWriting(const char* strOutputFile)
     /* resolution must be a multiple of two */
     pWCodecCtx->width = pRCodecCtx->width;
     pWCodecCtx->height = pRCodecCtx->height;
+    pWCodecCtx->codec_id = pWOutputFmt->video_codec;
+    pWCodecCtx->codec_type = AVMEDIA_TYPE_VIDEO;
     /* frames per second */
     //pWCodecCtx->time_base = pRCodecCtx->time_base;
     //pWCodecCtx->framerate = pRCodecCtx->framerate;
     //pWCodecCtx->time_base.num = pWCodecCtx->framerate.den = 1;// (AVRational) { 1, 30 };
     //pWCodecCtx->time_base.den = pWCodecCtx->framerate.num = 30;// (AVRational) { 1, 30 };
     //pWCodecCtx->framerate = (AVRational){ 30, 1 };
-    
+    pWCodecCtx->bit_rate = 6000000;
     pWCodecCtx->gop_size = pRCodecCtx->gop_size;
     pWCodecCtx->max_b_frames = pRCodecCtx->max_b_frames;
     //pWCodecCtx->pix_fmt = AVPixelFormat::AV_PIX_FMT_YUV420P;
@@ -228,12 +238,15 @@ int CAVCapture::openWriting(const char* strOutputFile)
         
         av_opt_set(pWCodecCtx, "tune", "zerolatency", 0);
     }
-
+    else if (pCodec->id == AV_CODEC_ID_H265)
+    {
+        av_opt_set(pWCodecCtx, "preset", "ultrafast", 0);
+    }
    
 
     /* open it */
     if (avcodec_open2(pWCodecCtx, pCodec, nullptr) < 0)
-        return 5;
+        return 6;
 
     //open output file
     //pFile = fopen(strOutputFile, "wb");
@@ -242,56 +255,40 @@ int CAVCapture::openWriting(const char* strOutputFile)
 
     pWFrame = av_frame_alloc();
     if (!pWFrame)
-        return 6;
+        return 7;
 
     pWFrame->format = (int)pWCodecCtx->pix_fmt;
     pWFrame->width = pWCodecCtx->width;
     pWFrame->height = pWCodecCtx->height;
 
+    //allocate buffer for new video data
     if (av_frame_get_buffer(pWFrame, 32) < 0)
-        return 7;
-
-    //ret = avcodec_parameters_from_context(mContext.stream->codecpar, mContext.codec_context);
-    if (avcodec_parameters_from_context(pStream->codecpar, pWCodecCtx) < 0)
         return 8;
-    //{
-    //    std::cout << "could not copy the stream parameters" << std::endl;
-    //    break;
-    //}
 
-    //mContext.sws_context = sws_getContext(
-    //    mContext.codec_context->width, mContext.codec_context->height, params.src_format,   // src
-    //    mContext.codec_context->width, mContext.codec_context->height, params.dst_format, // dst
-    //    SWS_BICUBIC, nullptr, nullptr, nullptr
-    //);
-    //if (!mContext.sws_context)
-    //{
-    //    std::cout << "could not initialize the conversion context" << std::endl;
-    //    break;
-    //}
+    if (avcodec_parameters_from_context(pStream->codecpar, pWCodecCtx) < 0)
+        return 9;
+
+    pWSwsContext = sws_getContext(pWCodecCtx->width,
+        pWCodecCtx->height,
+        AVPixelFormat::AV_PIX_FMT_BGR24,
+        pWCodecCtx->width,
+        pWCodecCtx->height,
+        pWCodecCtx->pix_fmt //AV_PIX_FMT_YUV420p
+        , SWS_FAST_BILINEAR, nullptr, nullptr, nullptr);
+
+    if (!pWSwsContext)
+        return 10;
 
     av_dump_format(pWFormatCtx, 0, strOutputFile, 1);
 
-    avio_open(&pWFormatCtx->pb, strOutputFile, AVIO_FLAG_WRITE);
     if (avio_open(&pWFormatCtx->pb, strOutputFile, AVIO_FLAG_WRITE) != 0)
-        return 9;
-    //{
-    //    std::cout << "could not open " << filename << std::endl;
-    //    break;
-    //}
-
-    int ret = avformat_write_header(pWFormatCtx, nullptr);
-    if (ret < 0)
+        return 11;
+    
+    if (avformat_write_header(pWFormatCtx, nullptr) < 0)
     {
-        //std::cout << "could not write" << std::endl;
-        ret = avio_close(pWFormatCtx->pb);
-        if (ret != 0)
-            return 10;
-        //    std::cout << "failed to close file" << std::endl;
-        //break;
+        if (avio_close(pWFormatCtx->pb) != 0)
+            return 12;
     }
-
-
 
     return 0;
 }
@@ -316,13 +313,13 @@ void CAVCapture::closeWriting()
 
         flushPackets();
 
-        //av_write_trailer(pWFormatCtx);
-
+        av_write_trailer(pWFormatCtx);
         avio_close(pWFormatCtx->pb);
-        avformat_free_context(pWFormatCtx);
+        sws_freeContext(pWSwsContext);
+        av_frame_free(&pWFrame);
         avcodec_free_context(&pWCodecCtx);
         avcodec_close(pWCodecCtx);
-        av_frame_free(&pWFrame);
+        avformat_free_context(pWFormatCtx);
     }
 }
 
@@ -374,7 +371,7 @@ int CAVCapture::doReadWrite(const char* strInputFile, const char* strOutputFile)
             _bLoop = true;
             _thr_ai = thread(&CAVCapture::AIThread, this);
 
-            while (av_read_frame(pRFormatCtx, pRPacket) >= 0 && _isRun)
+            while (_isRun && av_read_frame(pRFormatCtx, pRPacket) >= 0)
             {
                 if (pRPacket->stream_index == videoindex)// read a compressed data
                 {

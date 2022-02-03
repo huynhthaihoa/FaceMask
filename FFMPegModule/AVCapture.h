@@ -69,6 +69,8 @@ private:
 	AVCodecContext* pWCodecCtx;
 	AVStream* pStream;
 	AVFrame* pWFrame;
-	uint8_t* pWBuffer;
+	//uint8_t* pWBuffer;
+	AVOutputFormat* pWOutputFmt;
+	SwsContext* pWSwsContext;
 };
 
