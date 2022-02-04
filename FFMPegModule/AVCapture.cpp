@@ -8,7 +8,7 @@ CAVCapture::CAVCapture()
 {
     _pDnn = new CAIDnn("obj.names", "obj.cfg", "obj.weights");// , 0.5f);
     _bLoop = false;
-
+    
     av_register_all();
     avdevice_register_all();
     avcodec_register_all();
@@ -93,21 +93,33 @@ void CAVCapture::waitForFinish()
 
 void CAVCapture::writeFrame(Mat frame, int64_t pts)
 {
-    //1st step - convert Mat into AvFrame
-    //struct SwsContext* sws_ctx_bgr_yuv = NULL;
-    //sws_ctx_bgr_yuv = sws_getContext(pWCodecCtx->width,
-    //    pWCodecCtx->height,
-    //    AVPixelFormat::AV_PIX_FMT_BGR24,
-    //    pWCodecCtx->width,
-    //    pWCodecCtx->height,
-    //    pWCodecCtx->pix_fmt //AV_PIX_FMT_YUV420p
-    //    , SWS_FAST_BILINEAR, nullptr, nullptr, nullptr);
+    if (_videoInterval != 0)
+    {
+        if (pts == 0)
+        {
+            //1st step - close writing on current file
+            if (_idx != -1)
+                closeWriting();
 
+            //2nd step - open writing on new file
+            ++_idx;
+            int64_t totalTime = _idx * _videoInterval;
+            int64_t second = totalTime % 60;
+            int64_t minute = totalTime / 60;
+            int64_t hour = minute / 60;
+            minute %= 60;
+
+            string strTime = string_format("%dsec_%dh%02dm%02ds", _videoInterval, hour, minute, second);
+            string strOutputFile = _strOutputName + "_" + strTime + _strOutputExt;
+            if (openWriting(strOutputFile.c_str()) != 0)
+                exit(1);
+        }
+    }
+
+    //1st step - convert Mat into AvFrame
     const int kStide[] = { (int)frame.step[0] };
     sws_scale(pWSwsContext, &frame.data, kStide, 0, frame.rows, pWFrame->data, pWFrame->linesize);
     pWFrame->pts = pts;
-
-    //sws_freeContext(sws_ctx_bgr_yuv);
 
     //2nd step - encode frame and send to video
     if (avcodec_send_frame(pWCodecCtx, pWFrame) < 0)
@@ -116,7 +128,7 @@ void CAVCapture::writeFrame(Mat frame, int64_t pts)
     flushPackets();
 }
 
-int CAVCapture::openReading(const char* strInputFile, int &videoindex)
+int CAVCapture::openReading(const char* strInputFile)
 {
     pRFormatCtx = avformat_alloc_context();
 
@@ -131,21 +143,22 @@ int CAVCapture::openReading(const char* strInputFile, int &videoindex)
         return -2;
     }
 
-    //int videoindex = -1;
+    _videoIndex = -1;
+
     for (int i = 0; i < pRFormatCtx->nb_streams; i++) {
         if (pRFormatCtx->streams[i]->codec->codec_type == AVMediaType::AVMEDIA_TYPE_VIDEO) {
-            videoindex = i;
+            _videoIndex = i;
             break;
         }
     }
-    if (videoindex < 0)
+    if (_videoIndex < 0)
     {
         avformat_close_input(&pRFormatCtx);
         pRFormatCtx = nullptr;
         return -3;
     }
 
-    pRCodecCtx = pRFormatCtx->streams[videoindex]->codec;
+    pRCodecCtx = pRFormatCtx->streams[_videoIndex]->codec;
     pRCodec = avcodec_find_decoder(pRCodecCtx->codec_id);
     if (pRCodec == nullptr)
         return -4;
@@ -172,8 +185,6 @@ int CAVCapture::openReading(const char* strInputFile, int &videoindex)
     _ySize = pRCodecCtx->width * pRCodecCtx->height;
     pRPacket = (AVPacket*)av_malloc(sizeof(AVPacket));
     av_new_packet(pRPacket, _ySize);
-
-    _nFrames = 0;
 
     return 0;
 }
@@ -224,13 +235,13 @@ int CAVCapture::openWriting(const char* strOutputFile)
     //pWCodecCtx->time_base.num = pWCodecCtx->framerate.den = 1;// (AVRational) { 1, 30 };
     //pWCodecCtx->time_base.den = pWCodecCtx->framerate.num = 30;// (AVRational) { 1, 30 };
     //pWCodecCtx->framerate = (AVRational){ 30, 1 };
-    pWCodecCtx->bit_rate = 6000000;
+    pWCodecCtx->bit_rate = _bitRates;
     pWCodecCtx->gop_size = pRCodecCtx->gop_size;
     pWCodecCtx->max_b_frames = pRCodecCtx->max_b_frames;
     //pWCodecCtx->pix_fmt = AVPixelFormat::AV_PIX_FMT_YUV420P;
     pWCodecCtx->pix_fmt = AVPixelFormat::AV_PIX_FMT_YUV420P;// pRCodecCtx->pix_fmt;
 
-    pStream->time_base = av_d2q(1 / 30.0, 120);
+    pStream->time_base = av_d2q(1 / _fps, 120);
     pWCodecCtx->time_base = pStream->time_base;
 
     if (pCodec->id == AV_CODEC_ID_H264) {
@@ -247,11 +258,6 @@ int CAVCapture::openWriting(const char* strOutputFile)
     /* open it */
     if (avcodec_open2(pWCodecCtx, pCodec, nullptr) < 0)
         return 6;
-
-    //open output file
-    //pFile = fopen(strOutputFile, "wb");
-    //if (!pFile)
-    //    return 7;
 
     pWFrame = av_frame_alloc();
     if (!pWFrame)
@@ -355,25 +361,44 @@ bool CAVCapture::flushPackets()
     return true;
 }
 
-int CAVCapture::doReadWrite(const char* strInputFile, const char* strOutputFile)
+int CAVCapture::doReadWrite(const char* strInputFile, const char* strOutputFile, int64_t bitRates, float fps, int64_t interval)
 {
-    int videoindex = -1;
-    int ret = openReading(strInputFile, videoindex);
+
+    //int videoindex = -1;
+    int ret = openReading(strInputFile);
     if (ret != 0)
         return ret;
     
-    ret = openWriting(strOutputFile);
-    if (ret != 0)
-        return ret;
+    _bitRates = bitRates;
+    _fps = fps;
+    if (interval != 0)
+    {
+        _videoInterval = interval;
+        _frameInterval = _videoInterval * _fps;
+        _strOutputName = strOutputFile;
+        int idx = _strOutputName.find_last_of(".");
+        _strOutputExt = _strOutputName.substr(idx);
+        _strOutputName = _strOutputName.substr(0, idx);
 
-    concurrency::task<void> t = concurrency::create_task([videoindex, this]()
+    }
+    else
+    {
+        _videoInterval = _frameInterval = 0;
+        ret = openWriting(strOutputFile);
+        if (ret != 0)
+            return ret;
+    }
+
+    concurrency::task<void> t = concurrency::create_task([this]()
         {
+            _nFrames = 0;
+            _idx = -1;
             _bLoop = true;
             _thr_ai = thread(&CAVCapture::AIThread, this);
 
             while (_isRun && av_read_frame(pRFormatCtx, pRPacket) >= 0)
             {
-                if (pRPacket->stream_index == videoindex)// read a compressed data
+                if (pRPacket->stream_index == _videoIndex)// read a compressed data
                 {
                     int success = 0;
 
@@ -399,7 +424,13 @@ int CAVCapture::doReadWrite(const char* strInputFile, const char* strOutputFile)
                         // to cut just above the width, in order to better display
                         SwsContext* pSwsCtx = sws_getContext(pRCodecCtx->width, pRCodecCtx->height, pRCodecCtx->pix_fmt, pRCodecCtx->width, pRCodecCtx->height, AVPixelFormat::AV_PIX_FMT_BGR24, SWS_FAST_BILINEAR, NULL, NULL, NULL);
                         sws_scale(pSwsCtx, (const uint8_t* const*)reinterpret_cast<AVPicture*>(pRFrame)->data, reinterpret_cast<AVPicture*>(pRFrame)->linesize, 0, pRFrame->height, reinterpret_cast<AVPicture*>(pRDst)->data, reinterpret_cast<AVPicture*>(pRDst)->linesize);
-                        pushFrame(pRCodecCtx->height, pRCodecCtx->width, pRBuffer, _nFrames++);
+                        pushFrame(pRCodecCtx->height, pRCodecCtx->width, pRBuffer, _nFrames);
+                        
+                        if(_videoInterval == 0)
+                            ++_nFrames;
+                        else
+                            _nFrames = (_nFrames + 1) % _frameInterval;
+
                         std::this_thread::sleep_for(std::chrono::milliseconds(5));
                         av_free_packet(pRPacket);
                         sws_freeContext(pSwsCtx);
