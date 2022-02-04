@@ -35,9 +35,19 @@ namespace FaceMask
 
         //float mFPS;
 
+        long mBitRate;
+
+        float mFPS;
+
+        long mInterval;
+
         public Form1()
         {
             InitializeComponent();
+
+            mBitRate = 6000000;
+            mFPS = 30;
+            mInterval = 0;
 
             cbEnableSetting_CheckedChanged(null, null);
         }
@@ -145,6 +155,13 @@ namespace FaceMask
         private void cbEnableSetting_CheckedChanged(object sender, EventArgs e)
         {
             gbOutputSetting.Enabled = cbEnableSetting.Checked;
+
+            if(gbOutputSetting.Enabled == false)
+            {
+                tbBitRate.Text = mBitRate.ToString();
+                tbFPS.Text = mFPS.ToString();
+                tbInterval.Text = mInterval.ToString();
+            }
         }
     }
 }
