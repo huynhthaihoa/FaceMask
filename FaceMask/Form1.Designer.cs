@@ -85,7 +85,6 @@ namespace FaceMask
             this.tbInterval.Name = "tbInterval";
             this.tbInterval.Size = new System.Drawing.Size(209, 39);
             this.tbInterval.TabIndex = 5;
-            this.tbInterval.Text = "0";
             this.tbInterval.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.tbKeyPress);
             // 
             // label3
@@ -103,7 +102,6 @@ namespace FaceMask
             this.tbFPS.Name = "tbFPS";
             this.tbFPS.Size = new System.Drawing.Size(209, 39);
             this.tbFPS.TabIndex = 3;
-            this.tbFPS.Text = "30";
             this.tbFPS.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.tbKeyPress);
             // 
             // label2
@@ -121,7 +119,6 @@ namespace FaceMask
             this.tbBitRate.Name = "tbBitRate";
             this.tbBitRate.Size = new System.Drawing.Size(209, 39);
             this.tbBitRate.TabIndex = 1;
-            this.tbBitRate.Text = "6000000";
             this.tbBitRate.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.tbKeyPress);
             // 
             // label1
@@ -153,6 +150,7 @@ namespace FaceMask
             this.Controls.Add(this.gbOutputSetting);
             this.Controls.Add(this.lbStatus);
             this.Controls.Add(this.btnSelect);
+            this.MaximizeBox = false;
             this.Name = "Form1";
             this.Text = "FaceMask";
             this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.Form1_FormClosed);
