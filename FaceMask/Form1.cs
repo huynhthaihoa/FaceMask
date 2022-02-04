@@ -2,7 +2,6 @@
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
-using System.ComponentModel;
 using System.Threading;
 
 namespace FaceMask
@@ -20,7 +19,7 @@ namespace FaceMask
         private static extern bool IsRun();
 
         [DllImport("FFMPegModule.dll", EntryPoint = "Process", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int Process(string strInputFile, string strOutputFile);
+        private static extern int Process(string strInputFile, string strOutputFile, long bitrate, float fps, long interval);
 
         [DllImport("FFMPegModule.dll", EntryPoint = "Release", CallingConvention = CallingConvention.Cdecl)]
         private static extern void Release();
@@ -32,10 +31,15 @@ namespace FaceMask
         //private string _inputFileName;
 
         //private string _outputFileName;
+        //long mBitRate;
+
+        //float mFPS;
 
         public Form1()
         {
             InitializeComponent();
+
+            cbEnableSetting_CheckedChanged(null, null);
         }
 
         private void btnSelect_Click(object sender, EventArgs e)
@@ -64,6 +68,10 @@ namespace FaceMask
 
         private void doProcess(string srcPath)
         {
+            long bitrate = long.Parse(tbBitRate.Text);
+            float fps = float.Parse(tbFPS.Text);
+            long interval = long.Parse(tbInterval.Text);
+
             MessageBox.Show("파일 저장 대상을 선택하십시오.");
             SaveFileDialog dlg = new SaveFileDialog();
             string ext = Path.GetExtension(srcPath);
@@ -74,11 +82,11 @@ namespace FaceMask
             if (dlg.ShowDialog() == DialogResult.OK)
             {
                 string dstPath = dlg.FileName;
-                int ret = Process(srcPath, dstPath);
+                int ret = Process(srcPath, dstPath, bitrate, fps, interval);
                 if (ret < 0)
-                    MessageBox.Show("Error on reading input video!");
+                    MessageBox.Show("입력 비디오를 읽는 동안 오류가 발생했습니다!");
                 else if (ret > 0)
-                    MessageBox.Show("Error on writing output video!");
+                    MessageBox.Show("출력 비디오를 쓰는 동안 오류가 발생했습니다!");
                 else
                 {
                     btnSelect.Text = "처리하는 중...";
@@ -111,7 +119,7 @@ namespace FaceMask
             }
             MethodInvoker mi = delegate ()
             {
-                MessageBox.Show("Finished!");
+                MessageBox.Show("끝났습니다!");
                 btnSelect.Text = "비디오를 선택합니다\n(클릭 또는 끌어서 놓기)";
                 btnSelect.Refresh();
                 btnSelect.Enabled = true;
@@ -127,6 +135,16 @@ namespace FaceMask
         {
             Release();
             System.Diagnostics.Process.GetCurrentProcess().Kill();
+        }
+
+        private void tbKeyPress(object sender, KeyPressEventArgs e)
+        {
+            e.Handled = !(char.IsNumber(e.KeyChar) || e.KeyChar == (char)Keys.Back || e.KeyChar == (char)Keys.Space);
+        }
+
+        private void cbEnableSetting_CheckedChanged(object sender, EventArgs e)
+        {
+            gbOutputSetting.Enabled = cbEnableSetting.Checked;
         }
     }
 }
