@@ -15,4 +15,8 @@
     <OutputPath></OutputPath>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Compile Remove="IniFile.cs" />
+  </ItemGroup>
+
 </Project>
