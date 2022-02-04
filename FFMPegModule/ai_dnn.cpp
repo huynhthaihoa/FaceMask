@@ -121,6 +121,21 @@ void CAIDnn::postprocess(Mat& frame, const std::vector<Mat>& outs)
         int idx = indices[i];
         Rect box = boxes[idx];
 
+        if (box.x >= frame.cols || box.y >= frame.rows)
+            continue;
+
+        if (box.x < 0)
+            box.x = 0;
+
+        if (box.y < 0)
+            box.y = 0;
+
+        if ((box.x + box.width) >= frame.cols)
+            box.width = frame.cols - box.x;
+
+        if ((box.y + box.height) >= frame.rows)
+            box.height = frame.rows - box.y;
+
         int classId = classIds[idx];
 
         if (classId == 1)
