@@ -34,9 +34,9 @@ public:
 	void AIThread();
 	void pushFrame(int rows, int cols, uint8_t* buffer, int64_t pts);
 	void waitForFinish();
-	int doReadWrite(const char* strInputFile, const char* strOutputFile);
+	int doReadWrite(const char* strInputFile, const char* strOutputFile, int64_t bitRates = 6000000, float fps = 30.0f, int64_t interval = 0);
 	void writeFrame(Mat frame, int64_t pts);
-	int openReading(const char* strInputFile, int& videoindex);
+	int openReading(const char* strInputFile);
 	int openWriting(const char* strOutputFile);
 	void closeReading();
 	void closeWriting();
@@ -50,7 +50,7 @@ private:
 
 	queue<pair<Mat, int64_t>> _frames;
 
-	int _nFrames;
+	int64_t _nFrames;
 
 	int _ySize;
 	AVPixelFormat _format;
@@ -63,14 +63,24 @@ private:
 	AVFrame* pRDst;
 	AVPacket* pRPacket;
 	uint8_t* pRBuffer;
-	
+	int _videoIndex;
+
 	AVCodec* pCodec;
 	AVFormatContext* pWFormatCtx;
 	AVCodecContext* pWCodecCtx;
 	AVStream* pStream;
 	AVFrame* pWFrame;
-	//uint8_t* pWBuffer;
 	AVOutputFormat* pWOutputFmt;
 	SwsContext* pWSwsContext;
+
+	int64_t _bitRates;
+	float _fps;
+	int64_t _frameInterval;
+	int64_t _videoInterval;
+
+	string _strOutputName;
+	string _strOutputExt;
+
+	int _idx;
 };
 
