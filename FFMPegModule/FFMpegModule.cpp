@@ -12,7 +12,7 @@ DLLEXPORT bool IsRun()
 	return _isRun;
 }
 
-DLLEXPORT int Process(const char* strInputFile, const char* strOutputFile)
+DLLEXPORT int Process(const char* strInputFile, const char* strOutputFile, long bitrate, float fps, long interval)
 {
 	if (_avCapture == nullptr)
 	{
@@ -20,7 +20,7 @@ DLLEXPORT int Process(const char* strInputFile, const char* strOutputFile)
 		_avCapture = AvCapture;
 	}
 
-	int ret = _avCapture->doReadWrite(strInputFile, strOutputFile);
+	int ret = _avCapture->doReadWrite(strInputFile, strOutputFile, bitrate, fps, interval);
 	_isRun = (ret == 0);
 
 	return ret;
