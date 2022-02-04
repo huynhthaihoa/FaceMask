@@ -4,5 +4,5 @@
 #include <iostream>
 
 DLLEXPORT bool IsRun();
-DLLEXPORT int Process(const char* strInputFile, const char* strOutputFile);
+DLLEXPORT int Process(const char* strInputFile, const char* strOutputFile, long bitrate, float fps, long interval);
 DLLEXPORT void Release();
