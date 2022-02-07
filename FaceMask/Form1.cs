@@ -19,7 +19,7 @@ namespace FaceMask
         private static extern bool IsRun();
 
         [DllImport("FFMPegModule.dll", EntryPoint = "Process", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int Process(string strInputFile, string strOutputFile, long bitrate, float fps, long interval);
+        private static extern int Process(string strInputFile, string strOutputFile, long bitrate, float fps, long duration);
 
         [DllImport("FFMPegModule.dll", EntryPoint = "Release", CallingConvention = CallingConvention.Cdecl)]
         private static extern void Release();
@@ -39,7 +39,7 @@ namespace FaceMask
 
         float mFPS;
 
-        long mInterval;
+        long mDuration;
 
         public Form1()
         {
@@ -47,7 +47,7 @@ namespace FaceMask
 
             mBitRate = 6000000;
             mFPS = 30;
-            mInterval = 0;
+            mDuration = 0;
 
             cbEnableSetting_CheckedChanged(null, null);
         }
@@ -80,7 +80,7 @@ namespace FaceMask
         {
             long bitrate = long.Parse(tbBitRate.Text);
             float fps = float.Parse(tbFPS.Text);
-            long interval = long.Parse(tbInterval.Text);
+            long duration = long.Parse(tbDuration.Text);
 
             MessageBox.Show("파일 저장 대상을 선택하십시오.");
             SaveFileDialog dlg = new SaveFileDialog();
@@ -92,7 +92,7 @@ namespace FaceMask
             if (dlg.ShowDialog() == DialogResult.OK)
             {
                 string dstPath = dlg.FileName;
-                int ret = Process(srcPath, dstPath, bitrate, fps, interval);
+                int ret = Process(srcPath, dstPath, bitrate, fps, duration);
                 if (ret < 0)
                     MessageBox.Show("입력 비디오를 읽는 동안 오류가 발생했습니다!");
                 else if (ret > 0)
@@ -160,7 +160,7 @@ namespace FaceMask
             {
                 tbBitRate.Text = mBitRate.ToString();
                 tbFPS.Text = mFPS.ToString();
-                tbInterval.Text = mInterval.ToString();
+                tbDuration.Text = mDuration.ToString();
             }
         }
     }
