@@ -34,8 +34,8 @@ public:
 	void AIThread();
 	void pushFrame(int rows, int cols, uint8_t* buffer, int64_t pts);
 	void waitForFinish();
-	int doReadWrite(const char* strInputFile, const char* strOutputFile, int64_t bitRates = 6000000, float fps = 30.0f, int64_t interval = 0);
-	void writeFrame(Mat frame, int64_t pts);
+	int doReadWrite(const char* strInputFile, const char* strOutputFile, int64_t bitRates = 6000000, float fps = 30.0f, int64_t duration = 0);
+	int writeFrame(Mat frame, int64_t pts);
 	int openReading(const char* strInputFile);
 	int openWriting(const char* strOutputFile);
 	void closeReading();
@@ -75,8 +75,8 @@ private:
 
 	int64_t _bitRates;
 	float _fps;
-	int64_t _frameInterval;
-	int64_t _videoInterval;
+	int64_t _frameDuration;
+	int64_t _videoDuration;
 
 	string _strOutputName;
 	string _strOutputExt;
