@@ -32,7 +32,7 @@ namespace FaceMask
             this.btnSelect = new System.Windows.Forms.Button();
             this.lbStatus = new System.Windows.Forms.Label();
             this.gbOutputSetting = new System.Windows.Forms.GroupBox();
-            this.tbInterval = new System.Windows.Forms.TextBox();
+            this.tbDuration = new System.Windows.Forms.TextBox();
             this.label3 = new System.Windows.Forms.Label();
             this.tbFPS = new System.Windows.Forms.TextBox();
             this.label2 = new System.Windows.Forms.Label();
@@ -66,7 +66,7 @@ namespace FaceMask
             // 
             // gbOutputSetting
             // 
-            this.gbOutputSetting.Controls.Add(this.tbInterval);
+            this.gbOutputSetting.Controls.Add(this.tbDuration);
             this.gbOutputSetting.Controls.Add(this.label3);
             this.gbOutputSetting.Controls.Add(this.tbFPS);
             this.gbOutputSetting.Controls.Add(this.label2);
@@ -79,13 +79,13 @@ namespace FaceMask
             this.gbOutputSetting.TabStop = false;
             this.gbOutputSetting.Text = "출력 설정";
             // 
-            // tbInterval
+            // tbDuration
             // 
-            this.tbInterval.Location = new System.Drawing.Point(685, 103);
-            this.tbInterval.Name = "tbInterval";
-            this.tbInterval.Size = new System.Drawing.Size(209, 39);
-            this.tbInterval.TabIndex = 5;
-            this.tbInterval.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.tbKeyPress);
+            this.tbDuration.Location = new System.Drawing.Point(685, 103);
+            this.tbDuration.Name = "tbDuration";
+            this.tbDuration.Size = new System.Drawing.Size(209, 39);
+            this.tbDuration.TabIndex = 5;
+            this.tbDuration.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.tbKeyPress);
             // 
             // label3
             // 
@@ -94,7 +94,7 @@ namespace FaceMask
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(162, 32);
             this.label3.TabIndex = 4;
-            this.label3.Text = "분할 간격 (초)";
+            this.label3.Text = "분할 기간 (초)";
             // 
             // tbFPS
             // 
@@ -170,7 +170,7 @@ namespace FaceMask
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.TextBox tbFPS;
         private System.Windows.Forms.Label label2;
-        private System.Windows.Forms.TextBox tbInterval;
+        private System.Windows.Forms.TextBox tbDuration;
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.CheckBox cbEnableSetting;
     }
