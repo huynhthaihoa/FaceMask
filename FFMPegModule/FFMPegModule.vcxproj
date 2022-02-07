@@ -79,8 +79,8 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <OutDir>$(SolutionDir)FaceMask\bin\Debug\netcoreapp3.1\</OutDir>
-    <IncludePath>C:\library\cv452\include;C:\Users\sbnetHo\Downloads\LIBS\FaceMask\FFMPegModule\include\rtsp;C:\Users\sbnetHo\Downloads\LIBS\FaceMask\FFMPegModule\include\ffmpeg;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\library\cv452\lib;C:\Users\sbnetHo\Downloads\LIBS\FaceMask\FFMPegModule\lib\rtsp;C:\Users\sbnetHo\Downloads\LIBS\FaceMask\FFMPegModule\lib\ffmpeg;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\library\cv452\include;$(SolutionDir)FFMPegModule\include\ffmpeg;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\library\cv452\lib;$(SolutionDir)FFMPegModule\lib\ffmpeg;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
@@ -136,7 +136,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
       <OutputFile>$(SolutionDir)FaceMask\bin\Debug\netcoreapp3.1\FFMPegModule$(TargetExt)</OutputFile>
-      <AdditionalDependencies>opencv_world452d.lib;avcodec.lib;avdevice.lib;avfilter.lib;avformat.lib;avutil.lib;swscale.lib;RTSPClientLib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opencv_world452d.lib;avcodec.lib;avdevice.lib;avfilter.lib;avformat.lib;avutil.lib;swscale.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
