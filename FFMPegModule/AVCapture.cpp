@@ -52,7 +52,9 @@ void CAVCapture::AIThread()
         if (_isRun && _pDnn)
         {
             pair<Mat, int64_t> r = _pDnn->analysis(frame, pts);
-            writeFrame(r.first, r.second);
+            if (writeFrame(r.first, r.second) != 0)
+                _isRun = false;
+            //writeFrame(r.first, r.second);
         }
 
         lock.unlock();
@@ -91,9 +93,9 @@ void CAVCapture::waitForFinish()
     _cond.notify_one();
 }
 
-void CAVCapture::writeFrame(Mat frame, int64_t pts)
+int CAVCapture::writeFrame(Mat frame, int64_t pts)
 {
-    if (_videoInterval != 0)
+    if (_videoDuration != 0)
     {
         if (pts == 0)
         {
@@ -103,16 +105,17 @@ void CAVCapture::writeFrame(Mat frame, int64_t pts)
 
             //2nd step - open writing on new file
             ++_idx;
-            int64_t totalTime = _idx * _videoInterval;
+            int64_t totalTime = _idx * _videoDuration;
             int64_t second = totalTime % 60;
             int64_t minute = totalTime / 60;
             int64_t hour = minute / 60;
             minute %= 60;
 
-            string strTime = string_format("%dsec_%dh%02dm%02ds", _videoInterval, hour, minute, second);
+            string strTime = string_format("%dsec_%dh%02dm%02ds", _videoDuration, hour, minute, second);
             string strOutputFile = _strOutputName + "_" + strTime + _strOutputExt;
             if (openWriting(strOutputFile.c_str()) != 0)
-                exit(1);
+                return 1;
+                //exit(1);
         }
     }
 
@@ -123,9 +126,13 @@ void CAVCapture::writeFrame(Mat frame, int64_t pts)
 
     //2nd step - encode frame and send to video
     if (avcodec_send_frame(pWCodecCtx, pWFrame) < 0)
-        exit(1);
+        return 2;
+        //exit(2);
 
-    flushPackets();
+    if(flushPackets())
+        return 0;
+
+    return 3;
 }
 
 int CAVCapture::openReading(const char* strInputFile)
@@ -361,7 +368,7 @@ bool CAVCapture::flushPackets()
     return true;
 }
 
-int CAVCapture::doReadWrite(const char* strInputFile, const char* strOutputFile, int64_t bitRates, float fps, int64_t interval)
+int CAVCapture::doReadWrite(const char* strInputFile, const char* strOutputFile, int64_t bitRates, float fps, int64_t duration)
 {
 
     //int videoindex = -1;
@@ -371,10 +378,10 @@ int CAVCapture::doReadWrite(const char* strInputFile, const char* strOutputFile,
     
     _bitRates = bitRates;
     _fps = fps;
-    if (interval != 0)
+    if (duration != 0)
     {
-        _videoInterval = interval;
-        _frameInterval = _videoInterval * _fps;
+        _videoDuration = duration;
+        _frameDuration = _videoDuration * _fps;
         _strOutputName = strOutputFile;
         int idx = _strOutputName.find_last_of(".");
         _strOutputExt = _strOutputName.substr(idx);
@@ -383,7 +390,7 @@ int CAVCapture::doReadWrite(const char* strInputFile, const char* strOutputFile,
     }
     else
     {
-        _videoInterval = _frameInterval = 0;
+        _videoDuration = _frameDuration = 0;
         ret = openWriting(strOutputFile);
         if (ret != 0)
             return ret;
@@ -426,10 +433,10 @@ int CAVCapture::doReadWrite(const char* strInputFile, const char* strOutputFile,
                         sws_scale(pSwsCtx, (const uint8_t* const*)reinterpret_cast<AVPicture*>(pRFrame)->data, reinterpret_cast<AVPicture*>(pRFrame)->linesize, 0, pRFrame->height, reinterpret_cast<AVPicture*>(pRDst)->data, reinterpret_cast<AVPicture*>(pRDst)->linesize);
                         pushFrame(pRCodecCtx->height, pRCodecCtx->width, pRBuffer, _nFrames);
                         
-                        if(_videoInterval == 0)
+                        if(_videoDuration == 0)
                             ++_nFrames;
                         else
-                            _nFrames = (_nFrames + 1) % _frameInterval;
+                            _nFrames = (_nFrames + 1) % _frameDuration;
 
                         std::this_thread::sleep_for(std::chrono::milliseconds(5));
                         av_free_packet(pRPacket);
