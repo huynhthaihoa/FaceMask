@@ -20,7 +20,7 @@ class CAIDnn
 public:
 	CAIDnn(std::string strClassFile, string strCfgFile, std::string strWeightsFile, float confThres = 0.5f, float nmsThres = 0.4f);
 	~CAIDnn();
-	pair<Mat, int64_t> analysis(Mat& frame, int64_t pts);
+	Mat analysis(Mat& frame);
 private:
 	void postprocess(Mat& frame, const std::vector<Mat>& outs);
 	vector<string> _classes;
