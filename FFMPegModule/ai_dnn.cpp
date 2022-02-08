@@ -56,9 +56,8 @@ CAIDnn::~CAIDnn()
 {
 }
 
-pair<Mat, int64_t> CAIDnn::analysis(Mat& frame, int64_t pts)
+Mat CAIDnn::analysis(Mat& frame)
 {
-    pair<Mat, int64_t> p;
     Mat blob;
     vector<Mat> outs;
 
@@ -72,10 +71,7 @@ pair<Mat, int64_t> CAIDnn::analysis(Mat& frame, int64_t pts)
     Mat frame2 = frame.clone();
     postprocess(frame2, outs);
 
-    p.first = frame2;
-    p.second = pts;
-
-    return p;
+    return frame2;
 }
 
 void CAIDnn::postprocess(Mat& frame, const std::vector<Mat>& outs)
