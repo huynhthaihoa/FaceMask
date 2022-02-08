@@ -32,10 +32,10 @@ public:
 	CAVCapture();
 	~CAVCapture();
 	void AIThread();
-	void pushFrame(int rows, int cols, uint8_t* buffer, int64_t pts);
+	void pushFrame(int rows, int cols, uint8_t* buffer);
 	void waitForFinish();
 	int doReadWrite(const char* strInputFile, const char* strOutputFile, int64_t bitRates = 6000000, float fps = 30.0f, int64_t duration = 0);
-	int writeFrame(Mat frame, int64_t pts);
+	int writeFrame(Mat frame);
 	int openReading(const char* strInputFile);
 	int openWriting(const char* strOutputFile);
 	void closeReading();
@@ -48,7 +48,7 @@ private:
 	mutex _mtx;
 	condition_variable _cond;
 
-	queue<pair<Mat, int64_t>> _frames;
+	queue<Mat> _frames;
 
 	int64_t _nFrames;
 
@@ -64,6 +64,7 @@ private:
 	AVPacket* pRPacket;
 	uint8_t* pRBuffer;
 	int _videoIndex;
+	SwsContext* pRSwsCtx;
 
 	AVCodec* pCodec;
 	AVFormatContext* pWFormatCtx;
@@ -71,7 +72,7 @@ private:
 	AVStream* pStream;
 	AVFrame* pWFrame;
 	AVOutputFormat* pWOutputFmt;
-	SwsContext* pWSwsContext;
+	SwsContext* pWSwsCtx;
 
 	int64_t _bitRates;
 	float _fps;
