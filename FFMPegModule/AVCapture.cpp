@@ -42,26 +42,21 @@ void CAVCapture::AIThread()
         if (_frames.size() <= 0)
             break;
 
-        pair<Mat, int64_t> p = _frames.front();
-        Mat frame = p.first;
-        int64_t pts = p.second;
+        Mat frame = _frames.front();
         _frames.pop();
-
-        //lock.unlock();
 
         if (_isRun && _pDnn)
         {
-            pair<Mat, int64_t> r = _pDnn->analysis(frame, pts);
-            if (writeFrame(r.first, r.second) != 0)
+            Mat res = _pDnn->analysis(frame);
+            if (writeFrame(res) != 0)
                 _isRun = false;
-            //writeFrame(r.first, r.second);
         }
 
         lock.unlock();
     }
 }
 
-void CAVCapture::pushFrame(int rows, int cols, uint8_t* buffer, int64_t pts)
+void CAVCapture::pushFrame(int rows, int cols, uint8_t* buffer)
 {
     bool bNotify = false;
     unique_lock<mutex> lock(_mtx);
@@ -70,10 +65,7 @@ void CAVCapture::pushFrame(int rows, int cols, uint8_t* buffer, int64_t pts)
         bNotify = true;
 
     cv::Mat frame(rows, cols, CV_8UC3, buffer);
-    pair<Mat, int64_t> p;
-    p.first = frame;
-    p.second = pts;
-    _frames.push(p);
+    _frames.push(frame);
 
     if (bNotify)
         _cond.notify_one();
@@ -83,6 +75,7 @@ void CAVCapture::waitForFinish()
 {
     while (1) {
         unique_lock<mutex> lock(_mtx);
+
         if (!_isRun || _frames.size() <= 0) {
             break;
         }
@@ -93,43 +86,41 @@ void CAVCapture::waitForFinish()
     _cond.notify_one();
 }
 
-int CAVCapture::writeFrame(Mat frame, int64_t pts)
+int CAVCapture::writeFrame(Mat frame)
 {
-    if (_videoDuration != 0)
+    if (_videoDuration != 0 && _nFrames == 0)
     {
-        if (pts == 0)
-        {
-            //1st step - close writing on current file
-            if (_idx != -1)
-                closeWriting();
+        //1st step - close writing on current file
+        if (_idx != -1)
+            closeWriting();
 
-            //2nd step - open writing on new file
-            ++_idx;
-            int64_t totalTime = _idx * _videoDuration;
-            int64_t second = totalTime % 60;
-            int64_t minute = totalTime / 60;
-            int64_t hour = minute / 60;
-            minute %= 60;
+        //2nd step - open writing on new file
+        ++_idx;
+        int64_t totalTime = _idx * _videoDuration;
+        int64_t second = totalTime % 60;
+        int64_t minute = totalTime / 60;
+        int64_t hour = minute / 60;
+        minute %= 60;
 
-            string strTime = string_format("%dsec_%dh%02dm%02ds", _videoDuration, hour, minute, second);
-            string strOutputFile = _strOutputName + "_" + strTime + _strOutputExt;
-            if (openWriting(strOutputFile.c_str()) != 0)
-                return 1;
-                //exit(1);
-        }
+        string strTime = string_format("%dsec_%dh%02dm%02ds", _videoDuration, hour, minute, second);
+        string strOutputFile = _strOutputName + "_" + strTime + _strOutputExt;
+        if (openWriting(strOutputFile.c_str()) != 0)
+            return 1;
     }
 
     //1st step - convert Mat into AvFrame
     const int kStide[] = { (int)frame.step[0] };
-    sws_scale(pWSwsContext, &frame.data, kStide, 0, frame.rows, pWFrame->data, pWFrame->linesize);
-    pWFrame->pts = pts;
+    sws_scale(pWSwsCtx, &frame.data, kStide, 0, frame.rows, pWFrame->data, pWFrame->linesize);
+    pWFrame->pts = _nFrames++;
+    
+    if (_videoDuration != 0 && _nFrames >= _frameDuration)
+        _nFrames = 0;
 
     //2nd step - encode frame and send to video
     if (avcodec_send_frame(pWCodecCtx, pWFrame) < 0)
         return 2;
-        //exit(2);
 
-    if(flushPackets())
+    if (flushPackets())
         return 0;
 
     return 3;
@@ -179,6 +170,11 @@ int CAVCapture::openReading(const char* strInputFile)
         avformat_close_input(&pRFormatCtx);
         return -6;
     }
+
+    pRSwsCtx = sws_getContext(pRCodecCtx->width, pRCodecCtx->height, pRCodecCtx->pix_fmt, pRCodecCtx->width, pRCodecCtx->height, AVPixelFormat::AV_PIX_FMT_BGR24, SWS_FAST_BILINEAR, NULL, NULL, NULL);
+
+    if (!pRSwsCtx)
+        return -7;
 
     pRFrame = av_frame_alloc();
     _format = AVPixelFormat::AV_PIX_FMT_RGB24;
@@ -281,7 +277,7 @@ int CAVCapture::openWriting(const char* strOutputFile)
     if (avcodec_parameters_from_context(pStream->codecpar, pWCodecCtx) < 0)
         return 9;
 
-    pWSwsContext = sws_getContext(pWCodecCtx->width,
+    pWSwsCtx = sws_getContext(pWCodecCtx->width,
         pWCodecCtx->height,
         AVPixelFormat::AV_PIX_FMT_BGR24,
         pWCodecCtx->width,
@@ -289,7 +285,7 @@ int CAVCapture::openWriting(const char* strOutputFile)
         pWCodecCtx->pix_fmt //AV_PIX_FMT_YUV420p
         , SWS_FAST_BILINEAR, nullptr, nullptr, nullptr);
 
-    if (!pWSwsContext)
+    if (!pWSwsCtx)
         return 10;
 
     av_dump_format(pWFormatCtx, 0, strOutputFile, 1);
@@ -310,6 +306,7 @@ void CAVCapture::closeReading()
 {
     if (pRFormatCtx != nullptr)
     {
+        sws_freeContext(pRSwsCtx);
         av_frame_free(&pRFrame);
         av_frame_free(&pRDst);
         av_free(pRBuffer);
@@ -328,7 +325,7 @@ void CAVCapture::closeWriting()
 
         av_write_trailer(pWFormatCtx);
         avio_close(pWFormatCtx->pb);
-        sws_freeContext(pWSwsContext);
+        sws_freeContext(pWSwsCtx);
         av_frame_free(&pWFrame);
         avcodec_free_context(&pWCodecCtx);
         avcodec_close(pWCodecCtx);
@@ -425,23 +422,18 @@ int CAVCapture::doReadWrite(const char* strInputFile, const char* strOutputFile,
                             break;
                         }
                     }
- 
+
                     if (success)
                     {
                         // to cut just above the width, in order to better display
-                        SwsContext* pSwsCtx = sws_getContext(pRCodecCtx->width, pRCodecCtx->height, pRCodecCtx->pix_fmt, pRCodecCtx->width, pRCodecCtx->height, AVPixelFormat::AV_PIX_FMT_BGR24, SWS_FAST_BILINEAR, NULL, NULL, NULL);
-                        sws_scale(pSwsCtx, (const uint8_t* const*)reinterpret_cast<AVPicture*>(pRFrame)->data, reinterpret_cast<AVPicture*>(pRFrame)->linesize, 0, pRFrame->height, reinterpret_cast<AVPicture*>(pRDst)->data, reinterpret_cast<AVPicture*>(pRDst)->linesize);
-                        pushFrame(pRCodecCtx->height, pRCodecCtx->width, pRBuffer, _nFrames);
-                        
-                        if(_videoDuration == 0)
-                            ++_nFrames;
-                        else
-                            _nFrames = (_nFrames + 1) % _frameDuration;
+                        //SwsContext* pSwsCtx = sws_getContext(pRCodecCtx->width, pRCodecCtx->height, pRCodecCtx->pix_fmt, pRCodecCtx->width, pRCodecCtx->height, AVPixelFormat::AV_PIX_FMT_BGR24, SWS_FAST_BILINEAR, NULL, NULL, NULL);
+                        //sws_scale(pSwsCtx, (const uint8_t* const*)reinterpret_cast<AVPicture*>(pRFrame)->data, reinterpret_cast<AVPicture*>(pRFrame)->linesize, 0, pRFrame->height, reinterpret_cast<AVPicture*>(pRDst)->data, reinterpret_cast<AVPicture*>(pRDst)->linesize);
+                        sws_scale(pRSwsCtx, (const uint8_t* const*)reinterpret_cast<AVPicture*>(pRFrame)->data, reinterpret_cast<AVPicture*>(pRFrame)->linesize, 0, pRFrame->height, reinterpret_cast<AVPicture*>(pRDst)->data, reinterpret_cast<AVPicture*>(pRDst)->linesize);
+                        pushFrame(pRCodecCtx->height, pRCodecCtx->width, pRBuffer);
 
                         std::this_thread::sleep_for(std::chrono::milliseconds(5));
                         av_free_packet(pRPacket);
-                        sws_freeContext(pSwsCtx);
-
+                        //sws_freeContext(pSwsCtx);
                     }
                     else
                         break;
