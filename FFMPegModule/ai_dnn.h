@@ -23,7 +23,7 @@ public:
 	Mat analysis(Mat& frame);
 private:
 	void postprocess(Mat& frame, const std::vector<Mat>& outs);
-	vector<string> _classes;
+	//vector<string> _classes;
 	mutex _mtx;
 	condition_variable _cond;
 	string _appPath;
