@@ -26,35 +26,45 @@ extern "C" {
 #pragma warning(disable: 4819)
 #pragma warning(disable:4996)
 
+#ifndef _THREAD
+#define _THREAD
+#endif
+
 class CAVCapture
 {
 public:
 	CAVCapture();
 	~CAVCapture();
+	int doReadWrite(const char* strInputFile, const char* strOutputFile, int64_t bitRates = 6000000, float fps = 30.0f, int64_t duration = 0);
+#ifdef _THREAD
 	void AIThread();
 	void pushFrame(int rows, int cols, uint8_t* buffer);
 	void waitForFinish();
-	int doReadWrite(const char* strInputFile, const char* strOutputFile, int64_t bitRates = 6000000, float fps = 30.0f, int64_t duration = 0);
 	int writeFrame(Mat frame);
+#else
+	int writeFrame(int rows, int cols, uint8_t* buffer);
+#endif
 	int openReading(const char* strInputFile);
 	int openWriting(const char* strOutputFile);
 	void closeReading();
 	void closeWriting();
 	bool flushPackets();
 private:
+	CAIDnn* _pDnn;
+
+#ifdef _THREAD
 	bool _bLoop;
 	std::thread _thr_ai;
-	CAIDnn* _pDnn;
 	mutex _mtx;
 	condition_variable _cond;
-
 	queue<Mat> _frames;
+#endif
 
 	int64_t _nFrames;
 
-	int _ySize;
-	AVPixelFormat _format;
-	int _nBytes;	
+	//int _ySize;
+	//AVPixelFormat _format;
+	//int _nBytes;	
 
 	AVFormatContext* pRFormatCtx;
 	AVCodecContext* pRCodecCtx;
