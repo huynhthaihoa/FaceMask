@@ -3,12 +3,14 @@
 
 extern std::atomic<bool> _isRun;
 
-
 CAVCapture::CAVCapture()
 {
     _pDnn = new CAIDnn("obj.names", "obj.cfg", "obj.weights");// , 0.5f);
+
+#ifdef _THREAD
     _bLoop = false;
-    
+#endif
+
     av_register_all();
     avdevice_register_all();
     avcodec_register_all();
@@ -27,9 +29,14 @@ CAVCapture::~CAVCapture()
         //closeReading();
         //closeWriting();
         _isRun = false;
+#ifdef _THREAD
         _bLoop = false;
+#endif
     }
 }
+
+
+#ifdef _THREAD
 
 void CAVCapture::AIThread()
 {
@@ -112,7 +119,7 @@ int CAVCapture::writeFrame(Mat frame)
     const int kStide[] = { (int)frame.step[0] };
     sws_scale(pWSwsCtx, &frame.data, kStide, 0, frame.rows, pWFrame->data, pWFrame->linesize);
     pWFrame->pts = _nFrames++;
-    
+
     if (_videoDuration != 0 && _nFrames >= _frameDuration)
         _nFrames = 0;
 
@@ -125,6 +132,59 @@ int CAVCapture::writeFrame(Mat frame)
 
     return 3;
 }
+
+#else
+
+int CAVCapture::writeFrame(int rows, int cols, uint8_t* buffer)
+{
+    cv::Mat frame(rows, cols, CV_8UC3, buffer);
+
+    if (_isRun && _pDnn)
+    {
+        Mat res = _pDnn->analysis(frame);
+
+        if (_videoDuration != 0 && _nFrames == 0)
+        {
+            //1st step - close writing on current file
+            if (_idx != -1)
+                closeWriting();
+
+            //2nd step - open writing on new file
+            ++_idx;
+            int64_t totalTime = _idx * _videoDuration;
+            int64_t second = totalTime % 60;
+            int64_t minute = totalTime / 60;
+            int64_t hour = minute / 60;
+            minute %= 60;
+
+            string strTime = string_format("%dsec_%dh%02dm%02ds", _videoDuration, hour, minute, second);
+            string strOutputFile = _strOutputName + "_" + strTime + _strOutputExt;
+            if (openWriting(strOutputFile.c_str()) != 0)
+                return 1;
+        }
+
+        //1st step - convert Mat into AvFrame
+        const int kStide[] = { (int)res.step[0] };
+        sws_scale(pWSwsCtx, &res.data, kStide, 0, res.rows, pWFrame->data, pWFrame->linesize);
+        pWFrame->pts = _nFrames++;
+
+        if (_videoDuration != 0 && _nFrames >= _frameDuration)
+            _nFrames = 0;
+
+        //2nd step - encode frame and send to video
+        if (avcodec_send_frame(pWCodecCtx, pWFrame) < 0)
+            return 2;
+
+        if (flushPackets())
+            return 0;
+
+        return 3;
+    }
+
+    return 4;
+}
+
+#endif
 
 int CAVCapture::openReading(const char* strInputFile)
 {
@@ -177,15 +237,15 @@ int CAVCapture::openReading(const char* strInputFile)
         return -7;
 
     pRFrame = av_frame_alloc();
-    _format = AVPixelFormat::AV_PIX_FMT_RGB24;
-    _nBytes = av_image_get_buffer_size(AVPixelFormat::AV_PIX_FMT_RGB24, pRCodecCtx->width, pRCodecCtx->height, 32);
+    //_format = AVPixelFormat::AV_PIX_FMT_RGB24;
+    int _nBytes = av_image_get_buffer_size(AVPixelFormat::AV_PIX_FMT_RGB24, pRCodecCtx->width, pRCodecCtx->height, 32);
     pRBuffer = static_cast<uint8_t*>(av_malloc(_nBytes * sizeof(uint8_t)));
     avpicture_fill(reinterpret_cast<AVPicture*>(pRFrame), pRBuffer, AVPixelFormat::AV_PIX_FMT_BGR24, pRCodecCtx->width, pRCodecCtx->height);
 
     pRDst = av_frame_alloc();
-    av_image_fill_arrays(reinterpret_cast<AVPicture*>(pRDst)->data, reinterpret_cast<AVPicture*>(pRDst)->linesize, pRBuffer, _format, pRCodecCtx->width, pRCodecCtx->height, 1);
+    av_image_fill_arrays(reinterpret_cast<AVPicture*>(pRDst)->data, reinterpret_cast<AVPicture*>(pRDst)->linesize, pRBuffer, AVPixelFormat::AV_PIX_FMT_RGB24, pRCodecCtx->width, pRCodecCtx->height, 1);
 
-    _ySize = pRCodecCtx->width * pRCodecCtx->height;
+    int64_t _ySize = pRCodecCtx->width * pRCodecCtx->height;
     pRPacket = (AVPacket*)av_malloc(sizeof(AVPacket));
     av_new_packet(pRPacket, _ySize);
 
@@ -383,7 +443,6 @@ int CAVCapture::doReadWrite(const char* strInputFile, const char* strOutputFile,
         int idx = _strOutputName.find_last_of(".");
         _strOutputExt = _strOutputName.substr(idx);
         _strOutputName = _strOutputName.substr(0, idx);
-
     }
     else
     {
@@ -397,9 +456,11 @@ int CAVCapture::doReadWrite(const char* strInputFile, const char* strOutputFile,
         {
             _nFrames = 0;
             _idx = -1;
+#ifdef _THREAD
             _bLoop = true;
-            _thr_ai = thread(&CAVCapture::AIThread, this);
 
+            _thr_ai = thread(&CAVCapture::AIThread, this);
+#endif
             while (_isRun && av_read_frame(pRFormatCtx, pRPacket) >= 0)
             {
                 if (pRPacket->stream_index == _videoIndex)// read a compressed data
@@ -429,9 +490,12 @@ int CAVCapture::doReadWrite(const char* strInputFile, const char* strOutputFile,
                         //SwsContext* pSwsCtx = sws_getContext(pRCodecCtx->width, pRCodecCtx->height, pRCodecCtx->pix_fmt, pRCodecCtx->width, pRCodecCtx->height, AVPixelFormat::AV_PIX_FMT_BGR24, SWS_FAST_BILINEAR, NULL, NULL, NULL);
                         //sws_scale(pSwsCtx, (const uint8_t* const*)reinterpret_cast<AVPicture*>(pRFrame)->data, reinterpret_cast<AVPicture*>(pRFrame)->linesize, 0, pRFrame->height, reinterpret_cast<AVPicture*>(pRDst)->data, reinterpret_cast<AVPicture*>(pRDst)->linesize);
                         sws_scale(pRSwsCtx, (const uint8_t* const*)reinterpret_cast<AVPicture*>(pRFrame)->data, reinterpret_cast<AVPicture*>(pRFrame)->linesize, 0, pRFrame->height, reinterpret_cast<AVPicture*>(pRDst)->data, reinterpret_cast<AVPicture*>(pRDst)->linesize);
+#ifdef _THREAD                        
                         pushFrame(pRCodecCtx->height, pRCodecCtx->width, pRBuffer);
-
                         std::this_thread::sleep_for(std::chrono::milliseconds(5));
+#else
+                        writeFrame(pRCodecCtx->height, pRCodecCtx->width, pRBuffer);
+#endif
                         av_free_packet(pRPacket);
                         //sws_freeContext(pSwsCtx);
                     }
@@ -445,6 +509,8 @@ int CAVCapture::doReadWrite(const char* strInputFile, const char* strOutputFile,
                     break;
                 }
             }
+
+#ifdef _THREAD 
             waitForFinish();
 
             if (_bLoop) {
@@ -452,14 +518,16 @@ int CAVCapture::doReadWrite(const char* strInputFile, const char* strOutputFile,
                 if (_thr_ai.joinable())
                     _thr_ai.join();
             }
+#endif
 
             closeReading();
-
             closeWriting();
 
             _isRun = false;
             Concurrency::wait(10);
+#ifdef _THREAD
             _cond.notify_all();
+#endif
         });
 
     return 0;
