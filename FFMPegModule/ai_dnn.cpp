@@ -33,10 +33,10 @@ CAIDnn::CAIDnn(std::string strClassFile, string strCfgFile, std::string strWeigh
 
     _appPath = string(Drive) + string(Path);
     
-    ifstream ifs(_appPath + strClassFile);
-    string line;
-    while (getline(ifs, line))
-        _classes.push_back(line);
+    //ifstream ifs(_appPath + strClassFile);
+    //string line;
+    //while (getline(ifs, line))
+    //    _classes.push_back(line);
 
     _net = readNet(_appPath + strWeightsFile, _appPath + strCfgFile);
 
