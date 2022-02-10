@@ -76,10 +76,10 @@ private:
 	int _videoIndex;
 	SwsContext* pRSwsCtx;
 
-	AVCodec* pCodec;
+	AVCodec* pWCodec;
 	AVFormatContext* pWFormatCtx;
 	AVCodecContext* pWCodecCtx;
-	AVStream* pStream;
+	AVStream* pWStream;
 	AVFrame* pWFrame;
 	AVOutputFormat* pWOutputFmt;
 	SwsContext* pWSwsCtx;
