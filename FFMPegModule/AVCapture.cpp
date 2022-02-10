@@ -265,19 +265,19 @@ int CAVCapture::openWriting(const char* strOutputFile)
         return 2;
 
     //find a registered encoder
-    pCodec = avcodec_find_encoder(pWOutputFmt->video_codec);
-    if (!pCodec)
+    pWCodec = avcodec_find_encoder(pWOutputFmt->video_codec);
+    if (!pWCodec)
         return 3;
 
     //add a new stream to media file
-    pStream = avformat_new_stream(pWFormatCtx, nullptr);
-    if (!pStream)
+    pWStream = avformat_new_stream(pWFormatCtx, nullptr);
+    if (!pWStream)
         return 4;
 
-    pStream->id = (int)(pWFormatCtx->nb_streams - 1);
+    pWStream->id = (int)(pWFormatCtx->nb_streams - 1);
 
     //create codec context
-    pWCodecCtx = avcodec_alloc_context3(pCodec);
+    pWCodecCtx = avcodec_alloc_context3(pWCodec);
     if (!pWCodecCtx)
         return 5;
 
@@ -304,22 +304,27 @@ int CAVCapture::openWriting(const char* strOutputFile)
     //pWCodecCtx->pix_fmt = AVPixelFormat::AV_PIX_FMT_YUV420P;
     pWCodecCtx->pix_fmt = AVPixelFormat::AV_PIX_FMT_YUV420P;// pRCodecCtx->pix_fmt;
 
-    pStream->time_base = av_d2q(1 / _fps, 120);
-    pWCodecCtx->time_base = pStream->time_base;
+    pWStream->time_base = av_d2q(1 / _fps, 120);
+    pWCodecCtx->time_base = pWStream->time_base;
 
-    if (pCodec->id == AV_CODEC_ID_H264) {
+    if (pWCodec->id == AV_CODEC_ID_H264) {
         av_opt_set(pWCodecCtx, "preset", "superfast", 0);
         
         av_opt_set(pWCodecCtx, "tune", "zerolatency", 0);
     }
-    else if (pCodec->id == AV_CODEC_ID_H265)
+    else if (pWCodec->id == AV_CODEC_ID_H265)
     {
         av_opt_set(pWCodecCtx, "preset", "ultrafast", 0);
     }
    
+    if (pWFormatCtx->oformat->flags & AVFMT_GLOBALHEADER) {
+        pWCodecCtx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+    }
+
+    av_dump_format(pWFormatCtx, 0, strOutputFile, 1);
 
     /* open it */
-    if (avcodec_open2(pWCodecCtx, pCodec, nullptr) < 0)
+    if (avcodec_open2(pWCodecCtx, pWCodec, nullptr) < 0)
         return 6;
 
     pWFrame = av_frame_alloc();
@@ -334,7 +339,7 @@ int CAVCapture::openWriting(const char* strOutputFile)
     if (av_frame_get_buffer(pWFrame, 32) < 0)
         return 8;
 
-    if (avcodec_parameters_from_context(pStream->codecpar, pWCodecCtx) < 0)
+    if (avcodec_parameters_from_context(pWStream->codecpar, pWCodecCtx) < 0)
         return 9;
 
     pWSwsCtx = sws_getContext(pWCodecCtx->width,
@@ -347,8 +352,6 @@ int CAVCapture::openWriting(const char* strOutputFile)
 
     if (!pWSwsCtx)
         return 10;
-
-    av_dump_format(pWFormatCtx, 0, strOutputFile, 1);
 
     if (avio_open(&pWFormatCtx->pb, strOutputFile, AVIO_FLAG_WRITE) != 0)
         return 11;
@@ -410,8 +413,8 @@ bool CAVCapture::flushPackets()
             return false;
         }
 
-        av_packet_rescale_ts(&packet, pWCodecCtx->time_base, pStream->time_base);
-        packet.stream_index = pStream->index;
+        av_packet_rescale_ts(&packet, pWCodecCtx->time_base, pWStream->time_base);
+        packet.stream_index = pWStream->index;
 
         ret = av_interleaved_write_frame(pWFormatCtx, &packet);
         av_packet_unref(&packet);
