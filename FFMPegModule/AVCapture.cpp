@@ -5,7 +5,9 @@ extern std::atomic<bool> _isRun;
 
 CAVCapture::CAVCapture()
 {
-    _pDnn = new CAIDnn("obj.names", "obj.cfg", "obj.weights");// , 0.5f);
+    //_pDnn = new CAIDnn("obj.names", "obj.cfg", "obj.weights");// , 0.5f);
+    _pDnn = new CAIDnn("face.names", "face.cfg", "face.weights");// , 0.5f);
+
 
 #ifdef _THREAD
     _bLoop = false;
@@ -461,7 +463,6 @@ int CAVCapture::doReadWrite(const char* strInputFile, const char* strOutputFile,
             _idx = -1;
 #ifdef _THREAD
             _bLoop = true;
-
             _thr_ai = thread(&CAVCapture::AIThread, this);
 #endif
             while (_isRun && av_read_frame(pRFormatCtx, pRPacket) >= 0)
