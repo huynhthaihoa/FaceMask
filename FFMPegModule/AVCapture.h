@@ -49,6 +49,10 @@ public:
 	void closeReading();
 	void closeWriting();
 	bool flushPackets();
+
+	void updateStatus(int64_t , int64_t, int64_t);
+	function<void(int64_t, int64_t, int64_t)> _callback;
+
 private:
 	CAIDnn* _pDnn;
 
