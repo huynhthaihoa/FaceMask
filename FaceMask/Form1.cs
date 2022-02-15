@@ -9,11 +9,7 @@ namespace FaceMask
     public partial class Form1 : Form
     {
 
-        [DllImport("FFMPegModule.dll", EntryPoint = "ReadVideo", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int ReadVideo(string strInputFile);
-
-        [DllImport("FFMPegModule.dll", EntryPoint = "WriteVideo", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int WriteVideo(string strOutputFile);
+        public delegate void UpdateStatusCallback(long hour, long minute, long second);
 
         [DllImport("FFMPegModule.dll", EntryPoint = "IsRun", CallingConvention = CallingConvention.Cdecl)]
         private static extern bool IsRun();
@@ -23,6 +19,9 @@ namespace FaceMask
 
         [DllImport("FFMPegModule.dll", EntryPoint = "Release", CallingConvention = CallingConvention.Cdecl)]
         private static extern void Release();
+
+        [DllImport("FFMPegModule.dll", EntryPoint = "UpdateStatus", CallingConvention = CallingConvention.Cdecl)]
+        private static extern void SetUpdateStatusCallback(UpdateStatusCallback callback);
 
         //private int status;
         //[DllImport("FFMPegModule.dll", EntryPoint = "Test", CallingConvention = CallingConvention.Cdecl)]
@@ -102,17 +101,23 @@ namespace FaceMask
                     btnSelect.Text = "처리하는 중...";
                     btnSelect.Refresh();
                     btnSelect.Enabled = false;
+                    //UpdateStatus(delegate(long msg) {
+                    //    MessageBox.Show("이미 " + msg.ToString() + "초 처리됨!");
+                    //});
+                    SetUpdateStatusCallback(delegate (long hour, long minute, long second)
+                    {
+                        string msg = "이미 ";
+                        if (hour > 0)
+                            msg += hour.ToString() + "시간 ";
+                        if (minute > 0)
+                            msg += minute.ToString() + "분 ";
+                        if(second > 0)
+                            msg += second.ToString() + "초 ";
+                        msg += "처리되었습니다!";
+                        MessageBox.Show(msg);
+                    });
                     Thread thread = new Thread(onThreadProcessingVideo);
                     thread.Start();
-                    //MethodInvoker mi = delegate ()
-                    //{
-                    //    btnSelect.Text = "Loading...";
-                    //    while (IsRun() == true) ;
-                    //    btnSelect.Text = "비디오를 선택합니다\n(클릭 또는 끌어서 놓기)";
-
-                    //};
-                    //this.Invoke(mi);
-                    //Thread thread = 
                 }
 
             }
