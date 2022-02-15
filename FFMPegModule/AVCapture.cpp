@@ -110,9 +110,9 @@ int CAVCapture::writeFrame(Mat frame)
         int64_t minute = totalTime / 60;
         int64_t hour = minute / 60;
         minute %= 60;
-
-        string strTime = string_format("%dsec_%dh%02dm%02ds", _videoDuration, hour, minute, second);
-        string strOutputFile = _strOutputName + "_" + strTime + _strOutputExt;
+        if (_idx > 0)
+            updateStatus(hour, minute, second);
+        string strOutputFile = _strOutputName + string_format("_%dsec_%dh%02dm%02ds", _videoDuration, hour, minute, second) + _strOutputExt;
         if (openWriting(strOutputFile.c_str()) != 0)
             return 1;
     }
@@ -224,7 +224,6 @@ int CAVCapture::openReading(const char* strInputFile)
         return -4;
     if (avcodec_open2(pRCodecCtx, pRCodec, nullptr) < 0)
         return -5;
-
 
     if (!_pDnn)
     {
@@ -430,6 +429,11 @@ bool CAVCapture::flushPackets()
     return true;
 }
 
+void CAVCapture::updateStatus(int64_t hour, int64_t minute, int64_t second)
+{
+    _callback(hour, minute, second);
+}
+
 int CAVCapture::doReadWrite(const char* strInputFile, const char* strOutputFile, int64_t bitRates, float fps, int64_t duration)
 {
 
@@ -458,7 +462,7 @@ int CAVCapture::doReadWrite(const char* strInputFile, const char* strOutputFile,
     }
 
     concurrency::task<void> t = concurrency::create_task([this]()
-        {
+    {
             _nFrames = 0;
             _idx = -1;
 #ifdef _THREAD
@@ -532,7 +536,7 @@ int CAVCapture::doReadWrite(const char* strInputFile, const char* strOutputFile,
 #ifdef _THREAD
             _cond.notify_all();
 #endif
-        });
+    });
 
     return 0;
 }
