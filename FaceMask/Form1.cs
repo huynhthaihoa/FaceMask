@@ -54,6 +54,7 @@ namespace FaceMask
         private void btnSelect_Click(object sender, EventArgs e)
         {
             OpenFileDialog openFileDialog = new OpenFileDialog();
+            openFileDialog.Filter = "비디오|*.h264;*.mp4;*.avi|H264 비디오|*.h264|MP4 비디오|*.mp4|AVI 비디오|*.avi";
             if (openFileDialog.ShowDialog() == DialogResult.OK)
                 doProcess(openFileDialog.FileName);
         }
@@ -69,7 +70,7 @@ namespace FaceMask
             string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
             string ext = Path.GetExtension(files[0]);
 
-            if (ext == ".mp4" || ext == ".h264")
+            if (ext == ".mp4" || ext == ".h264" || ext == ".avi")
                 e.Effect = DragDropEffects.Copy;
             else
                 e.Effect = DragDropEffects.None;
@@ -117,18 +118,10 @@ namespace FaceMask
                                 msg += second.ToString() + "초 ";
                             msg += "처리되었습니다! 처리하는 중...";
 
-                            //MessageBox.Show("끝났습니다!");
                             btnSelect.Text = msg;// "비디오를 선택합니다\n(클릭 또는 끌어서 놓기)";
                             btnSelect.Refresh();
-                            //btnSelect.Enabled = true;
                         };
                         btnSelect.Invoke(mi);
-                        //btnSelect.Invoke(delegate ()
-                        //{ });
-                        //btnSelect.Invoke(delegate (long hour, long minute, long second)
-                        //{
-
-                        //});
                         //string msg = "이미 ";
                         //if (hour > 0)
                         //    msg += hour.ToString() + "시간 ";
