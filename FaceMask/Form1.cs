@@ -158,10 +158,6 @@ namespace FaceMask
             this.Invoke(mi);
         }
 
-        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
-        {
-        }
-
         private void Form1_FormClosed(object sender, FormClosedEventArgs e)
         {
             Release();
