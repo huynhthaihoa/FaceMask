@@ -70,6 +70,7 @@ public:
 	/**
     * Write current frame to output video
     * @param frame [Mat]: frame to be written
+	* @return zero on success, positive value on error
     */
 	int writeFrame(Mat frame);
 #else
@@ -78,6 +79,7 @@ public:
 	* @param rows [int]: number of rows of the frame
 	* @param cols [int]: number of columns of the frame
 	* @param buffer [uint8_t*]: current buffer
+	* @return zero on success, positive value on error
     */
 	int writeFrame(int rows, int cols, uint8_t* buffer);
 #endif
@@ -102,7 +104,8 @@ public:
     */
 	void closeWriting();
 	/**
-	Flush current packets into the encoder
+	* Flush current packets into the encoder
+	* @return true if success, false if otherwise
 	*/
 	bool flushPackets();
 	/**
