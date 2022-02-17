@@ -9,7 +9,7 @@ CAVCapture::CAVCapture()
     _pDnn = new CAIDnn("face.names", "face.cfg", "face.weights");// , 0.5f);
 
 
-#ifdef _THREAD
+#ifdef USE_THREAD
     _bLoop = false;
 #endif
 
@@ -31,14 +31,14 @@ CAVCapture::~CAVCapture()
         //closeReading();
         //closeWriting();
         _isRun = false;
-#ifdef _THREAD
+#ifdef USE_THREAD
         _bLoop = false;
 #endif
     }
 }
 
 
-#ifdef _THREAD
+#ifdef USE_THREAD
 
 void CAVCapture::AIThread()
 {
@@ -465,7 +465,7 @@ int CAVCapture::doReadWrite(const char* strInputFile, const char* strOutputFile,
     {
             _nFrames = 0;
             _idx = -1;
-#ifdef _THREAD
+#ifdef USE_THREAD
             _bLoop = true;
             _thr_ai = thread(&CAVCapture::AIThread, this);
 #endif
@@ -498,7 +498,7 @@ int CAVCapture::doReadWrite(const char* strInputFile, const char* strOutputFile,
                         //SwsContext* pSwsCtx = sws_getContext(pRCodecCtx->width, pRCodecCtx->height, pRCodecCtx->pix_fmt, pRCodecCtx->width, pRCodecCtx->height, AVPixelFormat::AV_PIX_FMT_BGR24, SWS_FAST_BILINEAR, NULL, NULL, NULL);
                         //sws_scale(pSwsCtx, (const uint8_t* const*)reinterpret_cast<AVPicture*>(pRFrame)->data, reinterpret_cast<AVPicture*>(pRFrame)->linesize, 0, pRFrame->height, reinterpret_cast<AVPicture*>(pRDst)->data, reinterpret_cast<AVPicture*>(pRDst)->linesize);
                         sws_scale(pRSwsCtx, (const uint8_t* const*)reinterpret_cast<AVPicture*>(pRFrame)->data, reinterpret_cast<AVPicture*>(pRFrame)->linesize, 0, pRFrame->height, reinterpret_cast<AVPicture*>(pRDst)->data, reinterpret_cast<AVPicture*>(pRDst)->linesize);
-#ifdef _THREAD                        
+#ifdef USE_THREAD                        
                         pushFrame(pRCodecCtx->height, pRCodecCtx->width, pRBuffer);
                         std::this_thread::sleep_for(std::chrono::milliseconds(5));
 #else
@@ -518,7 +518,7 @@ int CAVCapture::doReadWrite(const char* strInputFile, const char* strOutputFile,
                 }
             }
 
-#ifdef _THREAD 
+#ifdef USE_THREAD 
             waitForFinish();
 
             if (_bLoop) {
@@ -533,7 +533,7 @@ int CAVCapture::doReadWrite(const char* strInputFile, const char* strOutputFile,
 
             _isRun = false;
             Concurrency::wait(10);
-#ifdef _THREAD
+#ifdef USE_THREAD
             _cond.notify_all();
 #endif
     });
