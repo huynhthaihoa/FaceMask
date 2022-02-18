@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "ai_dnn.h"
 
-CAIDnn::CAIDnn(std::string strClassFile, string strCfgFile, std::string strWeightsFile, float confThres, float nmsThres)
+CAIDnn::CAIDnn(string strCfgFile, std::string strWeightsFile, float confThres, float nmsThres)//std::string strClassFile,
 {
     if (confThres >= 0.0f && confThres <= 1.0f)
         _confThres = confThres;
@@ -31,7 +31,7 @@ CAIDnn::CAIDnn(std::string strClassFile, string strCfgFile, std::string strWeigh
     CT2A ascii(strExeFileName, CP_UTF8);
     _splitpath_s(ascii.m_psz, Drive, Path, Filename, Ext);
 
-    _appPath = string(Drive) + string(Path);
+    string _appPath = string(Drive) + string(Path);
     
     //ifstream ifs(_appPath + strClassFile);
     //string line;
@@ -56,7 +56,7 @@ CAIDnn::~CAIDnn()
 {
 }
 
-Mat CAIDnn::analysis(Mat& frame)
+Mat CAIDnn::analysis(const Mat& frame)
 {
     Mat blob;
     vector<Mat> outs;
