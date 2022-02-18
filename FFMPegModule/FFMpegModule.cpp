@@ -35,8 +35,8 @@ DLLEXPORT void Release()
 	}
 }
 
-DLLEXPORT void SetUpdateStatusCallback(void (__stdcall* callback)(int64_t hour, int64_t minute, int64_t second))
-{
-	if (_avCapture)
-		_avCapture->_callback = callback;
-}
+//DLLEXPORT void SetUpdateStatusCallback(void (__stdcall* callback)(int64_t hour, int64_t minute, int64_t second))
+//{
+//	if (_avCapture)
+//		_avCapture->_callback = callback;
+//}
