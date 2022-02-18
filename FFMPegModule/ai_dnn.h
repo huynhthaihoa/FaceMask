@@ -18,41 +18,55 @@ using namespace dnn;
 class CAIDnn
 {
 public:
+	//* @param strClassFile [string]: class file path (.names file)
 	/**
     * Class constructor
-	* @param strClassFile [string]: class file path (.names file)
 	* @param strCfgFile [string]: config file path (.cfg file)
 	* @param strWeightsFile [string]: weight file path (.weights file)
 	* @param confThres [float]: confident threshold (default is 0.5f)
 	* @param nmsThres [float]: non-maximum suppression (NMS) threshold (default is 0.4f)
     */
-	CAIDnn(std::string strClassFile, string strCfgFile, std::string strWeightsFile, float confThres = 0.5f, float nmsThres = 0.4f);
+	CAIDnn(string strCfgFile, std::string strWeightsFile, float confThres = 0.5f, float nmsThres = 0.4f); //std::string strClassFile, 
 	/**
     Class destructor
     */
 	~CAIDnn();
 	/**
     * Analyse the current frame
-    * @param frame [Mat&]: frame to be analyzed
-	* @return analyzed frame
+    * @param frame [Mat&]: frame to be analysed
+	* @return analysed frame
     */
-	Mat analysis(Mat& frame);
+	Mat analysis(const Mat& frame);
 private:
 	/**
     * Postprocess the frame after running inference model on it
-    * @param frame [Mat&]: frame to be analyzed
+    * @param frame [Mat&]: frame to be postprocessed
 	* @param outs [vector<Mat>&]: output of the inference model
     */
 	void postprocess(Mat& frame, const std::vector<Mat>& outs);
 	//vector<string> _classes;
-	mutex _mtx;
-	condition_variable _cond;
-	string _appPath;
+	//mutex _mtx;
+	//condition_variable _cond;
+	//string _appPath;
 
-	float _confThres;// = 0.5f;
+	/**
+	Confidence threshold
+	*/
+	float _confThres;
+
+	/**
+    NMS threshold
+    */
 	float _nmsThres;
 
+	/**
+	DNN instance
+	*/
 	dnn::Net _net;
+
+	/**
+    Layers' names
+    */
 	vector<string> _names;
 };
 
