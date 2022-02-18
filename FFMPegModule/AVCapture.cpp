@@ -6,7 +6,7 @@ extern std::atomic<bool> _isRun;
 CAVCapture::CAVCapture()
 {
     //_pDnn = new CAIDnn("obj.names", "obj.cfg", "obj.weights");// , 0.5f);
-    _pDnn = new CAIDnn("face.names", "face.cfg", "face.weights");// , 0.5f);
+    _pDnn = new CAIDnn("face.cfg", "face.weights");// , 0.5f);//"face.names", 
 
 
 #ifdef USE_THREAD
@@ -95,7 +95,7 @@ void CAVCapture::waitForFinish()
     _cond.notify_one();
 }
 
-int CAVCapture::writeFrame(Mat frame)
+int CAVCapture::writeFrame(const Mat& frame)
 {
     if (_videoDuration != 0 && _nFrames == 0)
     {
@@ -110,8 +110,8 @@ int CAVCapture::writeFrame(Mat frame)
         int64_t minute = totalTime / 60;
         int64_t hour = minute / 60;
         minute %= 60;
-        if (_idx > 0)
-            updateStatus(hour, minute, second);
+        //if (_idx > 0)
+        //    updateStatus(hour, minute, second);
         string strOutputFile = _strOutputName + string_format("_%dsec_%dh%02dm%02ds", _videoDuration, hour, minute, second) + _strOutputExt;
         if (openWriting(strOutputFile.c_str()) != 0)
             return 1;
@@ -429,10 +429,10 @@ bool CAVCapture::flushPackets()
     return true;
 }
 
-void CAVCapture::updateStatus(int64_t hour, int64_t minute, int64_t second)
-{
-    _callback(hour, minute, second);
-}
+//void CAVCapture::updateStatus(int64_t hour, int64_t minute, int64_t second)
+//{
+//    _callback(hour, minute, second);
+//}
 
 int CAVCapture::doReadWrite(const char* strInputFile, const char* strOutputFile, int64_t bitRates, float fps, int64_t duration)
 {
