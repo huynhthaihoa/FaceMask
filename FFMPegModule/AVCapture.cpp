@@ -110,8 +110,8 @@ int CAVCapture::writeFrame(const Mat& frame)
         int64_t minute = totalTime / 60;
         int64_t hour = minute / 60;
         minute %= 60;
-        //if (_idx > 0)
-        //    updateStatus(hour, minute, second);
+        if (_idx > 0)
+            updateStatus(hour, minute, second);
         string strOutputFile = _strOutputName + string_format("_%dsec_%dh%02dm%02ds", _videoDuration, hour, minute, second) + _strOutputExt;
         if (openWriting(strOutputFile.c_str()) != 0)
             return 1;
@@ -429,10 +429,10 @@ bool CAVCapture::flushPackets()
     return true;
 }
 
-//void CAVCapture::updateStatus(int64_t hour, int64_t minute, int64_t second)
-//{
-//    _callback(hour, minute, second);
-//}
+void CAVCapture::updateStatus(int64_t hour, int64_t minute, int64_t second)
+{
+    _callback(hour, minute, second);
+}
 
 int CAVCapture::doReadWrite(const char* strInputFile, const char* strOutputFile, int64_t bitRates, float fps, int64_t duration)
 {
