@@ -9,7 +9,7 @@ namespace FaceMask
     public partial class Form1 : Form
     {
 
-        //public delegate void UpdateStatusCallback(long hour, long minute, long second);
+        public delegate void UpdateStatusCallback(long hour, long minute, long second);
 
         [DllImport("FFMPegModule.dll", EntryPoint = "IsRun", CallingConvention = CallingConvention.Cdecl)]
         private static extern bool IsRun();
@@ -20,8 +20,8 @@ namespace FaceMask
         [DllImport("FFMPegModule.dll", EntryPoint = "Release", CallingConvention = CallingConvention.Cdecl)]
         private static extern void Release();
 
-        //[DllImport("FFMPegModule.dll", EntryPoint = "SetUpdateStatusCallback", CallingConvention = CallingConvention.Cdecl)]
-        //private static extern void SetUpdateStatusCallback(UpdateStatusCallback callback);
+        [DllImport("FFMPegModule.dll", EntryPoint = "SetUpdateStatusCallback", CallingConvention = CallingConvention.Cdecl)]
+        private static extern void SetUpdateStatusCallback(UpdateStatusCallback callback);
 
         long mBitRate;
 
@@ -91,6 +91,9 @@ namespace FaceMask
                     btnSelect.Text = "처리하는 중...";
                     btnSelect.Refresh();
                     btnSelect.Enabled = false;
+                    tbBitRate.Enabled = false;
+                    tbFPS.Enabled = false;
+                    tbDuration.Enabled = false;
                     //SetUpdateStatusCallback(delegate (long hour, long minute, long second)
                     //{
                     //    MethodInvoker mi = delegate ()
@@ -120,7 +123,8 @@ namespace FaceMask
 
         private void onThreadProcessingVideo()
         {
-            while(true)
+            SetUpdateStatusCallback(updateStatus);
+            while (true)
             {
                 if (IsRun() == false)
                     break;
@@ -132,6 +136,9 @@ namespace FaceMask
                 btnSelect.Text = "비디오를 선택합니다\n(클릭 또는 끌어서 놓기)";
                 btnSelect.Refresh();
                 btnSelect.Enabled = true;
+                tbBitRate.Enabled = true;
+                tbFPS.Enabled = true;
+                tbDuration.Enabled = true;
             };
             this.Invoke(mi);
         }
@@ -159,36 +166,36 @@ namespace FaceMask
             }
         }
 
-        //private void updateStatus(long hour, long minute, long second)
-        //{
-        //    //string msg = "이미 ";
-        //    //if (hour > 0)
-        //    //    msg += hour.ToString() + "시간 ";
-        //    //if (minute > 0)
-        //    //    msg += minute.ToString() + "분 ";
-        //    //if (second > 0)
-        //    //    msg += second.ToString() + "초 ";
-        //    //msg += "처리되었습니다! 처리하는 중...";
+        private void updateStatus(long hour, long minute, long second)
+        {
+            //string msg = "이미 ";
+            //if (hour > 0)
+            //    msg += hour.ToString() + "시간 ";
+            //if (minute > 0)
+            //    msg += minute.ToString() + "분 ";
+            //if (second > 0)
+            //    msg += second.ToString() + "초 ";
+            //msg += "처리되었습니다! 처리하는 중...";
 
-        //    //btnSelect.Text = msg;
-        //    //btnSelect.Refresh();
-        //    MethodInvoker mi = delegate ()
-        //    {
-        //        string msg = "이미 ";
-        //        if (hour > 0)
-        //            msg += hour.ToString() + "시간 ";
-        //        if (minute > 0)
-        //            msg += minute.ToString() + "분 ";
-        //        if (second > 0)
-        //            msg += second.ToString() + "초 ";
-        //        msg += "처리되었습니다! 처리하는 중...";
+            //btnSelect.Text = msg;
+            //btnSelect.Refresh();
+            MethodInvoker mi = delegate ()
+            {
+                string msg = "이미 ";
+                if (hour > 0)
+                    msg += hour.ToString() + "시간 ";
+                if (minute > 0)
+                    msg += minute.ToString() + "분 ";
+                if (second > 0)
+                    msg += second.ToString() + "초 ";
+                msg += "처리되었습니다! 처리하는 중...";
 
-        //        btnSelect.Text = msg;
-        //        btnSelect.Refresh();
+                btnSelect.Text = msg;
+                btnSelect.Refresh();
 
-        //        Thread.Sleep(100);
-        //    };
-        //    btnSelect.Invoke(mi);
-        //}
+                Thread.Sleep(100);
+            };
+            btnSelect.Invoke(mi);
+        }
     }
 }
