@@ -56,13 +56,13 @@ public:
     AI thread to process each frame in the queue
     */
 	void AIThread();
+	//*@param rows[int]: number of rows of the frame
+	//* @param cols[int]: number of columns of the frame
 	/**
 	* Convert current buffer to frame & push it into queue for further processing
-	* @param rows [int]: number of rows of the frame
-	* @param cols [int]: number of columns of the frame
 	* @param buffer [uint8_t*]: current buffer 
 	*/
-	void pushFrame(int rows, int cols, uint8_t* buffer);
+	void pushFrame(uint8_t* buffer); //int rows, int cols, 
 	/**
 	To keep the reading - writing process waiting until AI thread is finished
     */
@@ -74,14 +74,14 @@ public:
     */
 	int writeFrame(const Mat& frame);
 #else
+	//* @param rows[int]: number of rows of the frame
+	//* @param cols[int]: number of columns of the frame
 	/**
     * Process and write current buffer to the output video
-	* @param rows [int]: number of rows of the frame
-	* @param cols [int]: number of columns of the frame
 	* @param buffer [uint8_t*]: current buffer
 	* @return zero on success, positive value on error
     */
-	int writeFrame(int rows, int cols, uint8_t* buffer);
+	int writeFrame(uint8_t* buffer); //int rows, int cols, 
 #endif
 	/**
     * Open input video file for reading
