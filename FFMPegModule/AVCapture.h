@@ -114,11 +114,11 @@ public:
 	* @param  minute [int64_t]: amount of minutes that has been written
 	* @param  second [int64_t]: amount of seconds that has been written
     */
-	//void updateStatus(int64_t hour, int64_t minute, int64_t second);
+	void updateStatus(int64_t hour, int64_t minute, int64_t second);
 	/**
 	Callback function
 	*/
-	//function<void(int64_t, int64_t, int64_t)> _callback;
+	function<void(int64_t, int64_t, int64_t)> _callback;
 
 private:
 	CAIDnn* _pDnn;
