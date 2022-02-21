@@ -65,15 +65,15 @@ void CAVCapture::AIThread()
     }
 }
 
-void CAVCapture::pushFrame(int rows, int cols, uint8_t* buffer)
+void CAVCapture::pushFrame(uint8_t* buffer) //int rows, int cols, 
 {
     bool bNotify = false;
     unique_lock<mutex> lock(_mtx);
 
     if (_frames.size() <= 0)
         bNotify = true;
-
-    cv::Mat frame(rows, cols, CV_8UC3, buffer);
+    //rows, cols
+    cv::Mat frame(pRCodecCtx->height, pRCodecCtx->width, CV_8UC3, buffer);
     _frames.push(frame);
 
     if (bNotify)
@@ -137,9 +137,9 @@ int CAVCapture::writeFrame(const Mat& frame)
 
 #else
 
-int CAVCapture::writeFrame(int rows, int cols, uint8_t* buffer)
+int CAVCapture::writeFrame(uint8_t* buffer) //int rows, int cols,
 {
-    cv::Mat frame(rows, cols, CV_8UC3, buffer);
+    cv::Mat frame(pRCodecCtx->height, pRCodecCtx->width, CV_8UC3, buffer);//rows, cols
 
     if (_isRun && _pDnn)
     {
@@ -499,7 +499,7 @@ int CAVCapture::doReadWrite(const char* strInputFile, const char* strOutputFile,
                         //sws_scale(pSwsCtx, (const uint8_t* const*)reinterpret_cast<AVPicture*>(pRFrame)->data, reinterpret_cast<AVPicture*>(pRFrame)->linesize, 0, pRFrame->height, reinterpret_cast<AVPicture*>(pRDst)->data, reinterpret_cast<AVPicture*>(pRDst)->linesize);
                         sws_scale(pRSwsCtx, (const uint8_t* const*)reinterpret_cast<AVPicture*>(pRFrame)->data, reinterpret_cast<AVPicture*>(pRFrame)->linesize, 0, pRFrame->height, reinterpret_cast<AVPicture*>(pRDst)->data, reinterpret_cast<AVPicture*>(pRDst)->linesize);
 #ifdef USE_THREAD                        
-                        pushFrame(pRCodecCtx->height, pRCodecCtx->width, pRBuffer);
+                        pushFrame(pRBuffer); //pRCodecCtx->height, pRCodecCtx->width, 
                         std::this_thread::sleep_for(std::chrono::milliseconds(5));
 #else
                         writeFrame(pRCodecCtx->height, pRCodecCtx->width, pRBuffer);
