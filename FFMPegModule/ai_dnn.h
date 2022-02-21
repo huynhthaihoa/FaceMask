@@ -68,5 +68,15 @@ private:
     Layers' names
     */
 	vector<string> _names;
+
+	/**
+	Net width
+	*/
+	int _netWidth;
+
+	/**
+	Net height
+	*/
+	int _netHeight;
 };
 
