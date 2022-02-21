@@ -32,13 +32,9 @@ CAIDnn::CAIDnn(string strCfgFile, std::string strWeightsFile, float confThres, f
     _splitpath_s(ascii.m_psz, Drive, Path, Filename, Ext);
 
     string _appPath = string(Drive) + string(Path);
-    
-    //ifstream ifs(_appPath + strClassFile);
-    //string line;
-    //while (getline(ifs, line))
-    //    _classes.push_back(line);
+    string cfgFile = _appPath + strCfgFile;
 
-    _net = readNet(_appPath + strWeightsFile, _appPath + strCfgFile);
+    _net = readNet(_appPath + strWeightsFile, cfgFile);
 
     _net.setPreferableBackend(DNN_BACKEND_CUDA);
     _net.setPreferableTarget(DNN_TARGET_CUDA_FP16);
@@ -49,7 +45,12 @@ CAIDnn::CAIDnn(string strCfgFile, std::string strWeightsFile, float confThres, f
     _names.resize(_outLayers.size());
     for (int i = 0; i < _outLayers.size(); i++)
         _names[i] = _layersNames[_outLayers[i] - 1];
-
+    
+    char cSize[256];
+    GetPrivateProfileStringA("net", "width", "608", cSize, 256, cfgFile.c_str());
+    _netWidth = atoi(cSize);
+    GetPrivateProfileStringA("net", "height", "608", cSize, 256, cfgFile.c_str());
+    _netHeight = atoi(cSize);
 }
 
 CAIDnn::~CAIDnn()
@@ -62,7 +63,7 @@ Mat CAIDnn::analysis(const Mat& frame)
     vector<Mat> outs;
 
     if (!_net.empty()) {
-        blobFromImage(frame, blob, 1 / 255.0, cv::Size(608, 608), Scalar(0, 0, 0), true, false);
+        blobFromImage(frame, blob, 1 / 255.0, cv::Size(_netWidth, _netHeight), Scalar(0, 0, 0), true, false); //cv::Size(608, 608)
 
         _net.setInput(blob);
         _net.forward(outs, _names);
