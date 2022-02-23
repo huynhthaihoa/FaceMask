@@ -97,22 +97,50 @@ void CAVCapture::waitForFinish()
 
 int CAVCapture::writeFrame(const Mat& frame)
 {
-    if (_videoDuration != 0 && _nFrames == 0)
+    if (_videoDuration != 0 && (_nFrames == 0 || _nFrames >= _frameDuration))
     {
         //1st step - close writing on current file
-        if (_idx != -1)
+        //if (_idx != -1)
+        //    closeWriting();
+
+        ////2nd step - open writing on new file
+        //++_idx;
+        //int64_t totalTime = _idx * _videoDuration;
+        //int64_t second = totalTime % 60;
+        //int64_t minute = totalTime / 60;
+        //int64_t hour = minute / 60;
+        //minute %= 60;
+        //if (_idx > 0)
+        //    updateStatus(hour, minute, second);
+        //string strOutputFile = _strOutputName + string_format("_%dsec_%dh%02dm%02ds", _videoDuration, hour, minute, second) + _strOutputExt;
+        //if (openWriting(strOutputFile.c_str()) != 0)
+        //    return 1;
+
+        if (_nFrames >= _frameDuration)
+        {
+            //1st step - close writing on current file
             closeWriting();
 
-        //2nd step - open writing on new file
-        ++_idx;
-        int64_t totalTime = _idx * _videoDuration;
-        int64_t second = totalTime % 60;
-        int64_t minute = totalTime / 60;
-        int64_t hour = minute / 60;
-        minute %= 60;
-        if (_idx > 0)
-            updateStatus(hour, minute, second);
-        string strOutputFile = _strOutputName + string_format("_%dsec_%dh%02dm%02ds", _videoDuration, hour, minute, second) + _strOutputExt;
+            //2nd step - update time-related properties
+            _sec += _videoDuration;
+            if (_sec >= 60)
+            {
+                _min += (_sec / 60);
+                _sec %= 60;
+                if (_min >= 60)
+                {
+                    _hr += (_min / 60);
+                    _min %= 60;
+                }
+            }
+
+            //3rd - trigger updateStatus callback & update _nFrames
+            updateStatus();// _hr, _min, _sec);
+            _nFrames = 0;
+        }
+
+        //4th step - open writing on new file
+        string strOutputFile = _strOutputName + string_format("_%dsec_%dh%02dm%02ds", _videoDuration, _hr, _min, _sec) + _strOutputExt;
         if (openWriting(strOutputFile.c_str()) != 0)
             return 1;
     }
@@ -122,8 +150,8 @@ int CAVCapture::writeFrame(const Mat& frame)
     sws_scale(pWSwsCtx, &frame.data, kStide, 0, frame.rows, pWFrame->data, pWFrame->linesize);
     pWFrame->pts = _nFrames++;
 
-    if (_videoDuration != 0 && _nFrames >= _frameDuration)
-        _nFrames = 0;
+    //if (_videoDuration != 0 && _nFrames >= _frameDuration)
+    //    _nFrames = 0;
 
     //2nd step - encode frame and send to video
     if (avcodec_send_frame(pWCodecCtx, pWFrame) < 0)
@@ -145,33 +173,62 @@ int CAVCapture::writeFrame(uint8_t* buffer) //int rows, int cols,
     {
         Mat res = _pDnn->analysis(frame);
 
-        if (_videoDuration != 0 && _nFrames == 0)
+        if (_videoDuration != 0 && (_nFrames == 0 || _nFrames >= _frameDuration))
         {
             //1st step - close writing on current file
-            if (_idx != -1)
+            //if (_idx != -1)
+            //    closeWriting();
+
+            ////2nd step - open writing on new file
+            //++_idx;
+            //int64_t totalTime = _idx * _videoDuration;
+            //int64_t second = totalTime % 60;
+            //int64_t minute = totalTime / 60;
+            //int64_t hour = minute / 60;
+            //minute %= 60;
+            //if (_idx > 0)
+            //    updateStatus(hour, minute, second);
+            //string strOutputFile = _strOutputName + string_format("_%dsec_%dh%02dm%02ds", _videoDuration, hour, minute, second) + _strOutputExt;
+            //if (openWriting(strOutputFile.c_str()) != 0)
+            //    return 1;
+
+            if (_nFrames >= _frameDuration)
+            {
+                //1st step - close writing on current file
                 closeWriting();
 
-            //2nd step - open writing on new file
-            ++_idx;
-            int64_t totalTime = _idx * _videoDuration;
-            int64_t second = totalTime % 60;
-            int64_t minute = totalTime / 60;
-            int64_t hour = minute / 60;
-            minute %= 60;
+                //2nd step - update time-related properties
+                _sec += _videoDuration;
+                if (_sec >= 60)
+                {
+                    _min += (_sec / 60);
+                    _sec %= 60;
+                    if (_min >= 60)
+                    {
+                        _hr += (_min / 60);
+                        _min %= 60;
+                    }
+                }
 
-            string strTime = string_format("%dsec_%dh%02dm%02ds", _videoDuration, hour, minute, second);
-            string strOutputFile = _strOutputName + "_" + strTime + _strOutputExt;
+                //3rd - trigger updateStatus callback & update _nFrames
+                updateStatus();// _hr, _min, _sec);
+                _nFrames = 0;
+            }
+
+            //4th step - open writing on new file
+            string strOutputFile = _strOutputName + string_format("_%dsec_%dh%02dm%02ds", _videoDuration, _hr, _min, _sec) + _strOutputExt;
             if (openWriting(strOutputFile.c_str()) != 0)
                 return 1;
-        }
+    }
+
 
         //1st step - convert Mat into AvFrame
         const int kStide[] = { (int)res.step[0] };
         sws_scale(pWSwsCtx, &res.data, kStide, 0, res.rows, pWFrame->data, pWFrame->linesize);
         pWFrame->pts = _nFrames++;
 
-        if (_videoDuration != 0 && _nFrames >= _frameDuration)
-            _nFrames = 0;
+        //if (_videoDuration != 0 && _nFrames >= _frameDuration)
+        //    _nFrames = 0;
 
         //2nd step - encode frame and send to video
         if (avcodec_send_frame(pWCodecCtx, pWFrame) < 0)
@@ -429,9 +486,9 @@ bool CAVCapture::flushPackets()
     return true;
 }
 
-void CAVCapture::updateStatus(int64_t hour, int64_t minute, int64_t second)
+void CAVCapture::updateStatus()//int64_t hour, int minute, int second)
 {
-    _callback(hour, minute, second);
+    _callback(_hr, _min, _sec);
 }
 
 int CAVCapture::doReadWrite(const char* strInputFile, const char* strOutputFile, int64_t bitRates, float fps, int64_t duration)
@@ -464,7 +521,10 @@ int CAVCapture::doReadWrite(const char* strInputFile, const char* strOutputFile,
     concurrency::task<void> t = concurrency::create_task([this]()
     {
             _nFrames = 0;
-            _idx = -1;
+            //_idx = -1;
+            _sec = 0;
+            _min = 0;
+            _hr = 0;
 #ifdef USE_THREAD
             _bLoop = true;
             _thr_ai = thread(&CAVCapture::AIThread, this);
