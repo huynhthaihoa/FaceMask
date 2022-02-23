@@ -153,7 +153,7 @@ namespace FaceMask
             this.MaximizeBox = false;
             this.Name = "Form1";
             this.Text = "FaceMask";
-            this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.Form1_FormClosed);
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Form1_FormClosing);
             this.gbOutputSetting.ResumeLayout(false);
             this.gbOutputSetting.PerformLayout();
             this.ResumeLayout(false);
