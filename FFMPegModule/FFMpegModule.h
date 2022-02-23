@@ -25,4 +25,4 @@ DLLEXPORT void Release();
 /**
 Set up callback function for CAvCapture::updateStatus
 */
-DLLEXPORT void SetUpdateStatusCallback(void (__stdcall * callback)(int64_t hour, int64_t minute, int64_t second));
+DLLEXPORT void SetUpdateStatusCallback(void (__stdcall * callback)(int64_t hour, int minute, int second));
