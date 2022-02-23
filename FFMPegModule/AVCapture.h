@@ -108,17 +108,17 @@ public:
 	* @return true if success, false if otherwise
 	*/
 	bool flushPackets();
+	//*@param  hour[int64_t]: amount of hours that has been written
+	//* @param  minute[int]: amount of minutes that has been written
+	//* @param  second[int]: amount of seconds that has been written
 	/**
     * Call callback function when finished writing one video (for duration-split mode) 
-	* @param  hour [int64_t]: amount of hours that has been written
-	* @param  minute [int64_t]: amount of minutes that has been written
-	* @param  second [int64_t]: amount of seconds that has been written
     */
-	void updateStatus(int64_t hour, int64_t minute, int64_t second);
+	void updateStatus();// int64_t hour, int minute, int second);
 	/**
 	Callback function
 	*/
-	function<void(int64_t, int64_t, int64_t)> _callback;
+	function<void(int64_t, int, int)> _callback;
 
 private:
 	CAIDnn* _pDnn;
@@ -155,8 +155,12 @@ private:
 	int64_t _frameDuration;
 	int64_t _videoDuration;
 	float _fps;
-	int _idx;
+	//int _idx;
 	string _strOutputName;
 	string _strOutputExt;
+
+	int _sec;
+	int _min;
+	int64_t _hr;
 };
 
