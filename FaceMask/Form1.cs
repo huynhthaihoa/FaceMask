@@ -9,7 +9,7 @@ namespace FaceMask
     public partial class Form1 : Form
     {
 
-        public delegate void UpdateStatusCallback(long hour, long minute, long second);
+        public delegate void UpdateStatusCallback(long hour, int minute, int second);
 
         [DllImport("FFMPegModule.dll", EntryPoint = "IsRun", CallingConvention = CallingConvention.Cdecl)]
         private static extern bool IsRun();
@@ -166,7 +166,7 @@ namespace FaceMask
             }
         }
 
-        private void updateStatus(long hour, long minute, long second)
+        private void updateStatus(long hour, int minute, int second)
         {
             //string msg = "이미 ";
             //if (hour > 0)
