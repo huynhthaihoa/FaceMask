@@ -113,7 +113,7 @@ namespace FaceMask
                     //    btnSelect.Invoke(mi);
                     //});
                     //SetUpdateStatusCallback(updateStatus);
-                    Thread thread = new Thread(onThreadProcessingVideo);
+                    Thread thread = new Thread(() => onThreadProcessingVideo(Path.GetDirectoryName(dstPath)));
                     thread.Start();
                 }
 
@@ -121,7 +121,7 @@ namespace FaceMask
 
         }
 
-        private void onThreadProcessingVideo()
+        private void onThreadProcessingVideo(string dirPath)
         {
             SetUpdateStatusCallback(updateStatus);
             while (true)
@@ -132,7 +132,6 @@ namespace FaceMask
             }
             MethodInvoker mi = delegate ()
             {
-                MessageBox.Show("끝났습니다!");
                 btnSelect.Text = "비디오를 선택합니다\n(클릭 또는 끌어서 놓기)";
                 btnSelect.Refresh();
                 btnSelect.Enabled = true;
@@ -140,14 +139,11 @@ namespace FaceMask
                 tbFPS.Enabled = true;
                 tbDuration.Enabled = true;
             };
-            this.Invoke(mi);
+            Invoke(mi);
+            MessageBox.Show("끝났습니다!");
+            if(cbDone.Checked == true)
+                System.Diagnostics.Process.Start("explorer.exe", dirPath);
         }
-
-        //private void Form1_FormClosed(object sender, FormClosedEventArgs e)
-        //{
-        //    Release();
-        //    System.Diagnostics.Process.GetCurrentProcess().Kill();
-        //}
 
         private void tbKeyPress(object sender, KeyPressEventArgs e)
         {
