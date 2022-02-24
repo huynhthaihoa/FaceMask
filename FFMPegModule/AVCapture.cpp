@@ -169,7 +169,7 @@ int CAVCapture::writeFrame(uint8_t* buffer) //int rows, int cols,
     {
         Mat res = _pDnn->analysis(frame);
 
-        if (_videoDuration != 0 && (_nFrames == 0 || _nFrames >= _frameDuration))
+        if (_videoDuration != 0 && _nFrames >= _frameDuration)
         {
             //1st step - close writing on current file
             //if (_idx != -1)
@@ -188,28 +188,25 @@ int CAVCapture::writeFrame(uint8_t* buffer) //int rows, int cols,
             //if (openWriting(strOutputFile.c_str()) != 0)
             //    return 1;
 
-            if (_nFrames >= _frameDuration)
+            //1st step - close writing on current file
+            closeWriting();
+
+            //2nd step - update time-related properties
+            _sec += _videoDuration;
+            if (_sec >= 60)
             {
-                //1st step - close writing on current file
-                closeWriting();
-
-                //2nd step - update time-related properties
-                _sec += _videoDuration;
-                if (_sec >= 60)
+                _min += (_sec / 60);
+                _sec %= 60;
+                if (_min >= 60)
                 {
-                    _min += (_sec / 60);
-                    _sec %= 60;
-                    if (_min >= 60)
-                    {
-                        _hr += (_min / 60);
-                        _min %= 60;
-                    }
+                    _hr += (_min / 60);
+                    _min %= 60;
                 }
-
-                //3rd - trigger updateStatus callback & update _nFrames
-                updateStatus();// _hr, _min, _sec);
-                _nFrames = 0;
             }
+
+            //3rd - trigger updateStatus callback & update _nFrames
+            updateStatus();// _hr, _min, _sec);
+            _nFrames = 0;
 
             //4th step - open writing on new file
             string strOutputFile = _strOutputName + string_format("_%dsec_%dh%02dm%02ds", _videoDuration, _hr, _min, _sec) + _strOutputExt;
