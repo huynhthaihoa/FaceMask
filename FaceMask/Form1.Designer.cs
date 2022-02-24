@@ -39,12 +39,16 @@ namespace FaceMask
             this.tbBitRate = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
             this.cbEnableSetting = new System.Windows.Forms.CheckBox();
+            this.cbDone = new System.Windows.Forms.CheckBox();
             this.gbOutputSetting.SuspendLayout();
             this.SuspendLayout();
             // 
             // btnSelect
             // 
             this.btnSelect.AllowDrop = true;
+            this.btnSelect.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.btnSelect.BackColor = System.Drawing.Color.Beige;
             this.btnSelect.Location = new System.Drawing.Point(210, 45);
             this.btnSelect.Name = "btnSelect";
@@ -66,6 +70,9 @@ namespace FaceMask
             // 
             // gbOutputSetting
             // 
+            this.gbOutputSetting.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.gbOutputSetting.Controls.Add(this.tbDuration);
             this.gbOutputSetting.Controls.Add(this.label3);
             this.gbOutputSetting.Controls.Add(this.tbFPS);
@@ -133,7 +140,7 @@ namespace FaceMask
             // cbEnableSetting
             // 
             this.cbEnableSetting.AutoSize = true;
-            this.cbEnableSetting.Location = new System.Drawing.Point(383, 550);
+            this.cbEnableSetting.Location = new System.Drawing.Point(210, 550);
             this.cbEnableSetting.Name = "cbEnableSetting";
             this.cbEnableSetting.Size = new System.Drawing.Size(228, 36);
             this.cbEnableSetting.TabIndex = 4;
@@ -141,11 +148,22 @@ namespace FaceMask
             this.cbEnableSetting.UseVisualStyleBackColor = true;
             this.cbEnableSetting.CheckedChanged += new System.EventHandler(this.cbEnableSetting_CheckedChanged);
             // 
+            // cbDone
+            // 
+            this.cbDone.AutoSize = true;
+            this.cbDone.Location = new System.Drawing.Point(525, 550);
+            this.cbDone.Name = "cbDone";
+            this.cbDone.Size = new System.Drawing.Size(348, 36);
+            this.cbDone.TabIndex = 5;
+            this.cbDone.Text = "완료되면 디렉토리를 엽니다";
+            this.cbDone.UseVisualStyleBackColor = true;
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(13F, 32F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1001, 835);
+            this.Controls.Add(this.cbDone);
             this.Controls.Add(this.cbEnableSetting);
             this.Controls.Add(this.gbOutputSetting);
             this.Controls.Add(this.lbStatus);
@@ -173,6 +191,7 @@ namespace FaceMask
         private System.Windows.Forms.TextBox tbDuration;
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.CheckBox cbEnableSetting;
+        private System.Windows.Forms.CheckBox cbDone;
     }
 }
 
