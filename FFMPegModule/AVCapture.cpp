@@ -97,7 +97,7 @@ void CAVCapture::waitForFinish()
 
 int CAVCapture::writeFrame(const Mat& frame)
 {
-    if (_videoDuration != 0 && (_nFrames == 0 || _nFrames >= _frameDuration))
+    if (_videoDuration != 0 && _nFrames >= _frameDuration)
     {
         //1st step - close writing on current file
         //if (_idx != -1)
@@ -116,32 +116,28 @@ int CAVCapture::writeFrame(const Mat& frame)
         //if (openWriting(strOutputFile.c_str()) != 0)
         //    return 1;
 
-        if (_nFrames >= _frameDuration)
+        //1st step - close writing on current file
+        closeWriting();
+
+        //2nd step - update time-related properties
+        _sec += _videoDuration;
+        if (_sec >= 60)
         {
-            //1st step - close writing on current file
-            closeWriting();
-
-            //2nd step - update time-related properties
-            _sec += _videoDuration;
-            if (_sec >= 60)
+            _min += (_sec / 60);
+            _sec %= 60;
+            if (_min >= 60)
             {
-                _min += (_sec / 60);
-                _sec %= 60;
-                if (_min >= 60)
-                {
-                    _hr += (_min / 60);
-                    _min %= 60;
-                }
+                _hr += (_min / 60);
+                _min %= 60;
             }
-
-            //3rd - trigger updateStatus callback & update _nFrames
-            updateStatus();// _hr, _min, _sec);
-            _nFrames = 0;
         }
 
+        //3rd - trigger updateStatus callback & update _nFrames
+        updateStatus();// _hr, _min, _sec);
+        _nFrames = 0;
+
         //4th step - open writing on new file
-        string strOutputFile = _strOutputName + string_format("_%dsec_%dh%02dm%02ds", _videoDuration, _hr, _min, _sec) + _strOutputExt;
-        if (openWriting(strOutputFile.c_str()) != 0)
+        if (openWriting(string_format("%s_%dsec_%dh%02dm%02ds%s", _strOutputName.c_str(), _videoDuration, _hr, _min, _sec, _strOutputExt).c_str()) != 0)
             return 1;
     }
 
@@ -501,30 +497,34 @@ int CAVCapture::doReadWrite(const char* strInputFile, const char* strOutputFile,
     
     _bitRates = bitRates;
     _fps = fps;
+    _videoDuration = duration;
+
+    _nFrames = 0;
+    //_idx = -1;
+    _sec = 0;
+    _min = 0;
+    _hr = 0;
+
     if (duration != 0)
     {
-        _videoDuration = duration;
         _frameDuration = _videoDuration * _fps;
         _strOutputName = strOutputFile;
         int idx = _strOutputName.find_last_of(".");
         _strOutputExt = _strOutputName.substr(idx);
         _strOutputName = _strOutputName.substr(0, idx);
+        ret = openWriting(string_format("%s_%dsec_0h00m00s%s", _strOutputName.c_str(), _videoDuration, _strOutputExt).c_str());
     }
     else
     {
-        _videoDuration = _frameDuration = 0;
+        _frameDuration = 0;
         ret = openWriting(strOutputFile);
-        if (ret != 0)
-            return ret;
     }
+
+    if (ret != 0)
+        return ret;
 
     concurrency::task<void> t = concurrency::create_task([this]()
     {
-            _nFrames = 0;
-            //_idx = -1;
-            _sec = 0;
-            _min = 0;
-            _hr = 0;
 #ifdef USE_THREAD
             _bLoop = true;
             _thr_ai = thread(&CAVCapture::AIThread, this);
