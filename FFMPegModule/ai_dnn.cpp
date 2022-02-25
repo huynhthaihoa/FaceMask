@@ -139,7 +139,7 @@ void CAIDnn::postprocess(Mat& frame, const std::vector<Mat>& outs)
         {
             Rect region(box.x, box.y, box.width, box.height);
             //Put Gaussian blur filter on detected region
-            GaussianBlur(frame(region), frame(region), Size(0, 0), 4);
+            GaussianBlur(frame(region), frame(region), Size(51, 51), 0);
             //Draw red rectangle around detected border
             cv::rectangle(frame, region, CV_RGB(255, 0, 0));
         }
