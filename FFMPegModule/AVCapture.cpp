@@ -137,7 +137,7 @@ int CAVCapture::writeFrame(const Mat& frame)
         _nFrames = 0;
 
         //4th step - open writing on new file
-        if (openWriting(string_format("%s_%dsec_%dh%02dm%02ds%s", _strOutputName.c_str(), _videoDuration, _hr, _min, _sec, _strOutputExt).c_str()) != 0)
+        if (openWriting(string_format("%s_%dsec_%dh%02dm%02ds%s", _strOutputName.c_str(), _videoDuration, _hr, _min, _sec, _strOutputExt.c_str()).c_str()) != 0)
             return 1;
     }
 
@@ -450,19 +450,15 @@ void CAVCapture::closeWriting()
 bool CAVCapture::flushPackets()
 {
     int ret;
-    do
+    while(true)
     {
         AVPacket packet = { 0 };
 
         ret = avcodec_receive_packet(pWCodecCtx, &packet);
         if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
             break;
-
         if (ret < 0)
-        {
-            //std::cout << "error encoding a frame: " << ret << std::endl;
             return false;
-        }
 
         av_packet_rescale_ts(&packet, pWCodecCtx->time_base, pWStream->time_base);
         packet.stream_index = pWStream->index;
@@ -470,11 +466,8 @@ bool CAVCapture::flushPackets()
         ret = av_interleaved_write_frame(pWFormatCtx, &packet);
         av_packet_unref(&packet);
         if (ret < 0)
-        {
-            //std::cout << "error while writing output packet: " << ret << std::endl;
             return false;
-        }
-    } while (ret >= 0);
+    }
 
     return true;
 }
@@ -509,7 +502,7 @@ int CAVCapture::doReadWrite(const char* strInputFile, const char* strOutputFile,
         int idx = _strOutputName.find_last_of(".");
         _strOutputExt = _strOutputName.substr(idx);
         _strOutputName = _strOutputName.substr(0, idx);
-        ret = openWriting(string_format("%s_%dsec_0h00m00s%s", _strOutputName.c_str(), _videoDuration, _strOutputExt).c_str());
+        ret = openWriting(string_format("%s_%dsec_0h00m00s%s", _strOutputName.c_str(), _videoDuration, _strOutputExt.c_str()).c_str());
     }
     else
     {
