@@ -530,26 +530,33 @@ int CAVCapture::doReadWrite(const char* strInputFile, const char* strOutputFile,
             {
                 if (pRPacket->stream_index == _videoIndex)// read a compressed data
                 {
-                    int success = 0;
+                    int state = 0;
 
                     int ret = avcodec_send_packet(pRCodecCtx, pRPacket);
                     if (ret < 0)
                         break;
 
-                    while (ret >= 0)
-                    {
-                        ret = avcodec_receive_frame(pRCodecCtx, pRFrame);
-                        if (ret <= 0)
-                        {
-                            if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
-                                success = 0;
-                            else
-                                success = 1;
-                            break;
-                        }
-                    }
+                    ret = avcodec_receive_frame(pRCodecCtx, pRFrame);
+                    if (ret == 0)
+                        state = 1;
+                    else if (ret == AVERROR(EAGAIN))
+                        state = 2;
+                    //while (ret >= 0)
+                    //{
+                    //    ret = avcodec_receive_frame(pRCodecCtx, pRFrame);
+                    //    if (ret <= 0)
+                    //    {
+                    //        if (ret == AVERROR(EAGAIN))
+                    //            state = 2;
+                    //        else if (ret == AVERROR_EOF)
+                    //            state = 0;
+                    //        else
+                    //            state = 1;
+                    //        break;
+                    //    }
+                    //}
 
-                    if (success)
+                    if (state == 1)
                     {
                         // to cut just above the width, in order to better display
                         //SwsContext* pSwsCtx = sws_getContext(pRCodecCtx->width, pRCodecCtx->height, pRCodecCtx->pix_fmt, pRCodecCtx->width, pRCodecCtx->height, AVPixelFormat::AV_PIX_FMT_BGR24, SWS_FAST_BILINEAR, NULL, NULL, NULL);
@@ -564,15 +571,16 @@ int CAVCapture::doReadWrite(const char* strInputFile, const char* strOutputFile,
                         av_free_packet(pRPacket);
                         //sws_freeContext(pSwsCtx);
                     }
-                    else
+                    else if(state == 0)
                         break;
                 }
-                else
-                {
-                    av_free_packet(pRPacket);
-                    av_init_packet(pRPacket);
-                    break;
-                }
+                //else
+                //{
+                //    av_free_packet(pRPacket);
+                //    //av_init_packet(pRPacket);
+                //    //break;
+                //}
+                av_packet_unref(pRPacket);
             }
 
 #ifdef USE_THREAD 
