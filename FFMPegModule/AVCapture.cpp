@@ -65,6 +65,7 @@ void CAVCapture::AIThread()
     }
 }
 
+#ifndef USE_OPENCV_CAPTURE
 void CAVCapture::pushFrame(uint8_t* buffer) //int rows, int cols, 
 {
     bool bNotify = false;
@@ -79,7 +80,21 @@ void CAVCapture::pushFrame(uint8_t* buffer) //int rows, int cols,
     if (bNotify)
         _cond.notify_one();
 }
+#else
+void CAVCapture::pushFrame(const cv::Mat& frame)
+{
+    bool bNotify = false;
+    unique_lock<mutex> lock(_mtx);
 
+    if (_frames.size() <= 0)
+        bNotify = true;
+
+    _frames.push(frame);
+
+    if (bNotify)
+        _cond.notify_one();
+}
+#endif
 void CAVCapture::waitForFinish()
 {
     while (1) {
@@ -240,6 +255,7 @@ int CAVCapture::writeFrame(uint8_t* buffer) //int rows, int cols,
 
 int CAVCapture::openReading(const char* strInputFile)
 {
+#ifndef USE_OPENCV_CAPTURE
     pRFormatCtx = avformat_alloc_context();
 
     if (avformat_open_input(&pRFormatCtx, strInputFile, NULL, NULL) != 0)
@@ -301,6 +317,10 @@ int CAVCapture::openReading(const char* strInputFile)
     av_new_packet(pRPacket, _ySize);
 
     return 0;
+#else
+    bool ret = _videoCapture.open(strInputFile);
+    return (ret == true) ? 0 : -1;
+#endif
 }
 
 int CAVCapture::openWriting(const char* strOutputFile)
@@ -339,8 +359,13 @@ int CAVCapture::openWriting(const char* strOutputFile)
     /* put sample parameters */
     //pWCodecCtx->bit_rate = 1000000;
     /* resolution must be a multiple of two */
+#ifdef USE_OPENCV_CAPTURE
+    pWCodecCtx->width = _videoCapture.get(CAP_PROP_FRAME_WIDTH);//pRCodecCtx->width;
+    pWCodecCtx->height = _videoCapture.get(CAP_PROP_FRAME_HEIGHT);//pRCodecCtx->height;
+#else
     pWCodecCtx->width = pRCodecCtx->width;
     pWCodecCtx->height = pRCodecCtx->height;
+#endif
     pWCodecCtx->codec_id = pWOutputFmt->video_codec;
     pWCodecCtx->codec_type = AVMEDIA_TYPE_VIDEO;
     /* frames per second */
@@ -350,9 +375,10 @@ int CAVCapture::openWriting(const char* strOutputFile)
     //pWCodecCtx->time_base.den = pWCodecCtx->framerate.num = 30;// (AVRational) { 1, 30 };
     //pWCodecCtx->framerate = (AVRational){ 30, 1 };
     pWCodecCtx->bit_rate = _bitRates;
+#ifndef USE_OPENCV_CAPTURE
     pWCodecCtx->gop_size = pRCodecCtx->gop_size;
     pWCodecCtx->max_b_frames = pRCodecCtx->max_b_frames;
-    //pWCodecCtx->pix_fmt = AVPixelFormat::AV_PIX_FMT_YUV420P;
+#endif
     pWCodecCtx->pix_fmt = AVPixelFormat::AV_PIX_FMT_YUV420P;// pRCodecCtx->pix_fmt;
 
     pWStream->time_base = av_d2q(1 / _fps, 120);
@@ -418,6 +444,7 @@ int CAVCapture::openWriting(const char* strOutputFile)
 
 void CAVCapture::closeReading()
 {
+#ifndef USE_OPENCV_CAPTURE  
     if (pRFormatCtx != nullptr)
     {
         sws_freeContext(pRSwsCtx);
@@ -427,6 +454,9 @@ void CAVCapture::closeReading()
         avcodec_close(pRCodecCtx);
         avformat_close_input(&pRFormatCtx);
     }
+#else
+    _videoCapture.release();
+#endif
 }
 
 void CAVCapture::closeWriting()
@@ -484,7 +514,7 @@ int CAVCapture::doReadWrite(const char* strInputFile, const char* strOutputFile,
     int ret = openReading(strInputFile);
     if (ret != 0)
         return ret;
-    
+
     _bitRates = bitRates;
     _fps = fps;
     _videoDuration = duration;
@@ -519,6 +549,7 @@ int CAVCapture::doReadWrite(const char* strInputFile, const char* strOutputFile,
             _bLoop = true;
             _thr_ai = thread(&CAVCapture::AIThread, this);
 #endif
+#ifndef USE_OPENCV_CAPTURE
             while (_isRun && av_read_frame(pRFormatCtx, pRPacket) >= 0)
             {
                 if (pRPacket->stream_index == _videoIndex)// read a compressed data
@@ -564,7 +595,7 @@ int CAVCapture::doReadWrite(const char* strInputFile, const char* strOutputFile,
                         av_free_packet(pRPacket);
                         //sws_freeContext(pSwsCtx);
                     }
-                    else if(state == 0)
+                    else if (state == 0)
                         break;
                 }
                 //else
@@ -575,7 +606,22 @@ int CAVCapture::doReadWrite(const char* strInputFile, const char* strOutputFile,
                 //}
                 av_packet_unref(pRPacket);
             }
-
+#else
+            cv::Mat frame;
+            while (true)
+            {
+                //cv::Mat frame;
+                _videoCapture >> frame;
+                if (frame.empty())
+                {
+                    //cap.release();
+                    break;
+                }
+                //++test;
+                pushFrame(frame);
+                std::this_thread::sleep_for(std::chrono::milliseconds(5));
+            }
+#endif
 #ifdef USE_THREAD 
             waitForFinish();
 
