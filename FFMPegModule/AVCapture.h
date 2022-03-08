@@ -30,6 +30,10 @@ extern "C" {
 #define USE_THREAD
 #endif
 
+#ifndef USE_OPENCV_CAPTURE
+#define USE_OPENCV_CAPTURE
+#endif
+
 class CAVCapture
 {
 public:
@@ -56,6 +60,8 @@ public:
     AI thread to process each frame in the queue
     */
 	void AIThread();
+
+#ifndef USE_OPENCV_CAPTURE
 	//*@param rows[int]: number of rows of the frame
 	//* @param cols[int]: number of columns of the frame
 	/**
@@ -63,6 +69,13 @@ public:
 	* @param buffer [uint8_t*]: current buffer 
 	*/
 	void pushFrame(uint8_t* buffer); //int rows, int cols, 
+#else
+    /**
+	* Push frame into queue for further processing
+	* @param buffer [uint8_t*]: current buffer
+	*/
+	void pushFrame(const cv::Mat &frame);
+#endif
 	/**
 	To keep the reading - writing process waiting until AI thread is finished
     */
@@ -132,6 +145,7 @@ private:
 #endif
 
 	//for reading
+#ifndef USE_OPENCV_CAPTURE
 	AVFormatContext* pRFormatCtx;
 	AVCodecContext* pRCodecCtx;
 	AVCodec* pRCodec;
@@ -141,7 +155,10 @@ private:
 	uint8_t* pRBuffer;
 	int _videoIndex;
 	SwsContext* pRSwsCtx;
-	
+#else
+	cv::VideoCapture _videoCapture;
+#endif
+
 	//for writing
 	AVCodec* pWCodec;
 	AVFormatContext* pWFormatCtx;
@@ -162,5 +179,6 @@ private:
 	int _sec;
 	int _min;
 	int64_t _hr;
+
 };
 
