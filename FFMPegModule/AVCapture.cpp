@@ -613,10 +613,7 @@ int CAVCapture::doReadWrite(const char* strInputFile, const char* strOutputFile,
                 //cv::Mat frame;
                 _videoCapture >> frame;
                 if (frame.empty())
-                {
-                    //cap.release();
                     break;
-                }
                 //++test;
                 pushFrame(frame);
                 std::this_thread::sleep_for(std::chrono::milliseconds(5));
