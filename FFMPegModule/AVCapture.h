@@ -72,7 +72,7 @@ public:
 #else
     /**
 	* Push frame into queue for further processing
-	* @param buffer [uint8_t*]: current buffer
+	* @param frame [cv::Mat]: current frame
 	*/
 	void pushFrame(const cv::Mat &frame);
 #endif
