@@ -121,7 +121,7 @@ namespace FaceMask
 
         }
 
-        private void onThreadProcessingVideo(string dirPath)
+        private void onThreadProcessingVideo(string desPath)
         {
             SetUpdateStatusCallback(updateStatus);
             while (true)
@@ -142,7 +142,7 @@ namespace FaceMask
             Invoke(mi);
             MessageBox.Show("끝났습니다!");
             if(cbDone.Checked == true)
-                System.Diagnostics.Process.Start("explorer.exe", dirPath);
+                System.Diagnostics.Process.Start("explorer.exe", desPath);
         }
 
         private void tbKeyPress(object sender, KeyPressEventArgs e)
