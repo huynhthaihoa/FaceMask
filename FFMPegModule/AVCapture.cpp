@@ -554,17 +554,17 @@ int CAVCapture::doReadWrite(const char* strInputFile, const char* strOutputFile,
             {
                 if (pRPacket->stream_index == _videoIndex)// read a compressed data
                 {
-                    int state = 0;
+                    //int state = 0;
 
                     int ret = avcodec_send_packet(pRCodecCtx, pRPacket);
-                    if (ret < 0)
+                    if (ret < 0 && ret != AVERROR(EAGAIN))
                         break;
 
                     ret = avcodec_receive_frame(pRCodecCtx, pRFrame);
-                    if (ret == 0)
-                        state = 1;
-                    else if (ret == AVERROR(EAGAIN))
-                        state = 2;
+                    //if (ret == 0)
+                    //    state = 1;
+                    //else if (ret == AVERROR(EAGAIN))
+                    //    state = 2;
                     //while (ret >= 0)
                     //{
                     //    ret = avcodec_receive_frame(pRCodecCtx, pRFrame);
@@ -580,7 +580,7 @@ int CAVCapture::doReadWrite(const char* strInputFile, const char* strOutputFile,
                     //    }
                     //}
 
-                    if (state == 1)
+                    if (ret == 0)
                     {
                         // to cut just above the width, in order to better display
                         //SwsContext* pSwsCtx = sws_getContext(pRCodecCtx->width, pRCodecCtx->height, pRCodecCtx->pix_fmt, pRCodecCtx->width, pRCodecCtx->height, AVPixelFormat::AV_PIX_FMT_BGR24, SWS_FAST_BILINEAR, NULL, NULL, NULL);
@@ -595,7 +595,7 @@ int CAVCapture::doReadWrite(const char* strInputFile, const char* strOutputFile,
                         av_free_packet(pRPacket);
                         //sws_freeContext(pSwsCtx);
                     }
-                    else if (state == 0)
+                    else if (ret != AVERROR(EAGAIN))
                         break;
                 }
                 //else
